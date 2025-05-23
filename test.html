@@ -27,6 +27,19 @@
     <button id="meBtn">Pobierz dane</button>
     <pre id="meResult"></pre>
 
+    <h2>Edytuj salę (wymaga tokena opiekuna/admina)</h2>
+    <form id="editRoomForm">
+        <input type="number" id="edit_room_id" placeholder="ID sali" required><br>
+        <input type="text" id="edit_room_number" placeholder="Numer sali" required><br>
+        <input type="text" id="edit_building" placeholder="Budynek" required><br>
+        <input type="number" id="edit_floor" placeholder="Piętro" required><br>
+        <input type="number" id="edit_room_capacity" placeholder="Pojemność" required><br>
+        <input type="text" id="edit_equipment" placeholder="Wyposażenie" required><br>
+        <input type="text" id="edit_status" placeholder="Status" required><br>
+        <button type="submit">Edytuj salę</button>
+    </form>
+    <div id="editRoomResult"></div>
+
     <script>
         const API_URL = "http://127.0.0.1:8000";
         let accessToken = "";
@@ -74,6 +87,32 @@
                 headers: {"Authorization": "Bearer " + accessToken}
             });
             document.getElementById("meResult").innerText = await res.text();
+        };
+
+        document.getElementById("editRoomForm").onsubmit = async function(e) {
+            e.preventDefault();
+            if (!accessToken) {
+                document.getElementById("editRoomResult").innerText = "Najpierw się zaloguj!";
+                return;
+            }
+            const roomId = document.getElementById("edit_room_id").value;
+            const body = {
+                room_number: document.getElementById("edit_room_number").value,
+                building: document.getElementById("edit_building").value,
+                floor: parseInt(document.getElementById("edit_floor").value),
+                room_capacity: parseInt(document.getElementById("edit_room_capacity").value),
+                equipment: document.getElementById("edit_equipment").value,
+                status: document.getElementById("edit_status").value
+            };
+            const res = await fetch(API_URL + "/rooms/" + roomId, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + accessToken
+                },
+                body: JSON.stringify(body)
+            });
+            document.getElementById("editRoomResult").innerText = await res.text();
         };
     </script>
 </body>

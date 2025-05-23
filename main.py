@@ -1,17 +1,19 @@
 from fastapi import FastAPI
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
-from models import User
+from models import Uzytkownik
 from schemas import UserCreate
 import bcrypt
 from routers import users, rooms
 from fastapi.middleware.cors import CORSMiddleware
+from routers import rezerwacje
+
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080"],  # lub ["*"] na testy
+    allow_origins=["http://localhost:8081"],  # lub ["*"] na testy
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -19,7 +21,7 @@ app.add_middleware(
 
 app.include_router(users.router)
 app.include_router(rooms.router)
-
+app.include_router(rezerwacje.router)
 
 
 

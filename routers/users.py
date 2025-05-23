@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from schemas import UserCreate
-from models import User
+from models import Uzytkownik
 from database import get_db
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM, get_password_hash
@@ -19,17 +19,17 @@ router = APIRouter()
 @router.post("/register")
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(
-        (User.email == user.email) | (User.username == user.username)
+        (Uzytkownik.email == user.email) | (Uzytkownik.username == user.username)
     ).first()
-
     if existing_user:
         raise HTTPException(status_code=400, detail="Użytkownik już istnieje")
 
     hashed_pw = get_password_hash(user.password)
-    new_user = User(
+    new_user = Uzytkownik(
         username=user.username,
         email=user.email,
-        hashed_password=hashed_pw
+        hashed_password=hashed_pw,
+        role=user.role 
     )
 
     db.add(new_user)
@@ -48,7 +48,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.get("/users/{user_id}")
 def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(Uzytkownik).filter(Uzytkownik.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Nie znaleziono użytkownika")
     return {
@@ -68,7 +68,7 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
 
 @router.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == form_data.username).first()
+    user = db.query(Uzytkownik).filter(Uzytkownik.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Nieprawidłowe dane logowania")
     access_token = create_access_token(data={"sub": user.username})
@@ -84,7 +84,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 @router.get("/me")
-def read_users_me(current_user: User = Depends(get_current_user)):
+def read_users_me(current_user: Uzytkownik = Depends(get_current_user)):
     return {
         "id": current_user.id,
         "username": current_user.username,

@@ -1,7 +1,7 @@
 import urllib.parse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-import urllib
+
 
 server = 'sanspacesrv.database.windows.net'
 database = 'SanSpaceDB'

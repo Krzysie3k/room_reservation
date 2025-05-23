@@ -1,0 +1,80 @@
+<!-- test.html -->
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Test logowania FastAPI</title>
+</head>
+<body>
+    <h2>Rejestracja</h2>
+    <form id="registerForm">
+        <input type="text" id="reg_username" placeholder="Nazwa użytkownika" required><br>
+        <input type="email" id="reg_email" placeholder="Email" required><br>
+        <input type="password" id="reg_password" placeholder="Hasło" required><br>
+        <button type="submit">Zarejestruj</button>
+    </form>
+    <div id="registerResult"></div>
+
+    <h2>Logowanie</h2>
+    <form id="loginForm">
+        <input type="text" id="login_username" placeholder="Nazwa użytkownika" required><br>
+        <input type="password" id="login_password" placeholder="Hasło" required><br>
+        <button type="submit">Zaloguj</button>
+    </form>
+    <div id="loginResult"></div>
+
+    <h2>Moje dane (wymaga tokena)</h2>
+    <button id="meBtn">Pobierz dane</button>
+    <pre id="meResult"></pre>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+        let accessToken = "";
+
+        document.getElementById("registerForm").onsubmit = async function(e) {
+            e.preventDefault();
+            const res = await fetch(API_URL + "/register", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    username: document.getElementById("reg_username").value,
+                    email: document.getElementById("reg_email").value,
+                    password: document.getElementById("reg_password").value
+                })
+            });
+            document.getElementById("registerResult").innerText = await res.text();
+        };
+
+        document.getElementById("loginForm").onsubmit = async function(e) {
+            e.preventDefault();
+            const form = new URLSearchParams();
+            form.append("username", document.getElementById("login_username").value);
+            form.append("password", document.getElementById("login_password").value);
+
+            const res = await fetch(API_URL + "/login", {
+                method: "POST",
+                headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                body: form
+            });
+            const data = await res.json();
+            if (data.access_token) {
+                accessToken = data.access_token;
+                document.getElementById("loginResult").innerText = "Zalogowano! Token zapisany.";
+            } else {
+                document.getElementById("loginResult").innerText = JSON.stringify(data);
+            }
+        };
+
+        document.getElementById("meBtn").onclick = async function() {
+            if (!accessToken) {
+                document.getElementById("meResult").innerText = "Najpierw się zaloguj!";
+                return;
+            }
+            const res = await fetch(API_URL + "/me", {
+                headers: {"Authorization": "Bearer " + accessToken}
+            });
+            document.getElementById("meResult").innerText = await res.text();
+        };
+    </script>
+</body>
+</html>

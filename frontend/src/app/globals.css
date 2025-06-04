@@ -1,26 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
     --foreground: #ededed;
   }
 }
 
 body {
-  background: var(--background);
+  margin: 0; /* zerujemy marginesy, żeby gradient zaczął się od samej krawędzi */
+  min-height: 100vh; /* co najmniej wysokość ekranu */
+  background-image: linear-gradient(
+    to bottom,
+    #21c0f0,
+    /* Tailwind blue-500 */ #8b5cf6,
+    /* Tailwind purple-500 */ #ec4899 /* Tailwind pink-500  */
+  );
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }

@@ -4,6 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
+import Image from "next/image";
+import { FaCalendarDay, FaChartBar, FaTable } from "react-icons/fa";
+import { FaUserGraduate } from "react-icons/fa6";
+import { RiLogoutCircleLine } from "react-icons/ri";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -24,27 +28,56 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="w-full flex justify-between items-center px-6 py-3 bg-purple-800 text-white shadow-md">
-      <div className="font-semibold">Zalogowany: {user?.name}</div>
+    <nav className="w-full flex justify-between items-center px-4  bg-white border-b shadow-sm">
+      {/* Logo */}
+      <Link href="/" className="flex items-center gap-2">
+        <Image
+          src="/sanspace_logo.png"
+          alt="Logo SanSpace"
+          width={50}
+          height={50}
+        />
+      </Link>
 
-      <div className="flex gap-4">
-        <NavLink href="/schedule" active={pathname === "/schedule"}>
-          📅 Kalendarz
+      {/* Menu */}
+      <div className="flex gap-8">
+        <NavLink
+          href="/schedule"
+          active={pathname === "/schedule"}
+          icon={<FaCalendarDay size={20} />}
+        >
+          Kalendarz
         </NavLink>
-        <NavLink href="/dashboard" active={pathname === "/dashboard"}>
-          📊 Dashboard
+        <NavLink
+          href="/dashboard"
+          active={pathname === "/dashboard"}
+          icon={<FaChartBar size={20} />}
+        >
+          Dashboard
         </NavLink>
-        <NavLink href="/reports" active={pathname === "/reports"}>
-          📈 Raporty
+        <NavLink
+          href="/reports"
+          active={pathname === "/reports"}
+          icon={<FaTable size={20} />}
+        >
+          Raporty
         </NavLink>
       </div>
 
-      <button
-        onClick={handleLogout}
-        className="bg-red-600 hover:bg-red-500 px-3 py-1 rounded"
-      >
-        Wyloguj się
-      </button>
+      {/* Użytkownik i wylogowanie */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 text-sm text-blue-950 hover:text-blue-800">
+          <FaUserGraduate size={20} />
+          <span className="hidden sm:inline">{user?.name}</span>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="text-blue-950 hover:text-red-800"
+          title="Wyloguj się"
+        >
+          <RiLogoutCircleLine size={20} />
+        </button>
+      </div>
     </nav>
   );
 }
@@ -53,20 +86,23 @@ function NavLink({
   href,
   active,
   children,
+  icon,
 }: {
   href: string;
   active: boolean;
   children: React.ReactNode;
+  icon: React.ReactNode;
 }) {
   return (
     <Link
       href={href}
       className={clsx(
-        "px-3 py-1 rounded hover:bg-purple-700",
-        active && "bg-purple-700 font-bold underline"
+        "flex flex-col items-center text-xs text-gray-200 hover:text-cyan-600",
+        active && " text-gray-700"
       )}
     >
-      {children}
+      {icon}
+      <span className="hidden sm:block text-[10px]">{children}</span>
     </Link>
   );
 }

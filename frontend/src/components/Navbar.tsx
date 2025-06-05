@@ -66,7 +66,7 @@ export default function Navbar() {
 
       {/* Użytkownik i wylogowanie */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-sm text-blue-950 hover:text-cyan-800">
+        <div className="flex items-center gap-2 text-sm text-blue-950 hover:text-blue-900">
           <FaUserGraduate size={20} />
           <span className="hidden sm:inline">{user?.name}</span>
         </div>
@@ -97,7 +97,7 @@ function NavLink({
     <Link
       href={href}
       className={clsx(
-        "flex flex-col items-center text-xs text-gray-200 hover:text-cyan-600",
+        "flex flex-col items-center text-xs text-gray-200 hover:text-blue-950",
         active && " text-gray-700"
       )}
     >

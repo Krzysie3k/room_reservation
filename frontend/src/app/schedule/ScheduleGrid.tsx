@@ -39,6 +39,11 @@ export default function ScheduleGrid() {
   });
   const dateKey = format(currentDate, "yyyy-MM-dd");
 
+  const currentUser =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("user") || "null")
+      : null;
+
   return (
     <>
       {/* MODAL */}
@@ -79,7 +84,7 @@ export default function ScheduleGrid() {
                   });
                   setSelectedSlot(null);
                 }}
-                className="px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 rounded"
+                className="px-3 py-1 bg-blue-950 text-white hover:bg-blue-700 rounded"
               >
                 Rezerwuj
               </button>
@@ -93,36 +98,36 @@ export default function ScheduleGrid() {
         <div className="flex gap-2">
           <button
             onClick={() => setCurrentDate((prev) => subDays(prev, 1))}
-            className="px-3 py-1 hover:bg-cyan-900 rounded"
+            className="px-3 py-1 hover:bg-blue-950 hover:text-white rounded"
           >
             ←
           </button>
           <button
             onClick={() => setCurrentDate(new Date())}
-            className="px-3 py-1 text-white bg-cyan-600 hover:bg-cyan-900 rounded"
+            className="px-3 py-1 text-white bg-blue-950 hover:bg-blue-900 rounded"
           >
             Dzisiaj
           </button>
           <button
             onClick={() => setCurrentDate((prev) => addDays(prev, 1))}
-            className="px-3 py-1 hover:bg-cyan-900 rounded"
+            className="px-3 py-1 hover:bg-blue-950 hover:text-white rounded"
           >
             →
           </button>
         </div>
-        <div className="font-semibold text-gray-500">{formattedDate}</div>
+        <div className="text-gray-500">{formattedDate}</div>
       </div>
 
       {/* Tabela siatki */}
       <div className="overflow-x-auto rounded-b">
-        <table className="table-auto border-collapse w-full text-sm">
+        <table className="table-fixed  border-collapse w-full text-sm">
           <thead className="bg-gray-100 text-gray-500">
             <tr>
               <th className="px-2 py-1 text-left">Nazwa</th>
               <th className="px-2 py-1 text-left">Miejsca</th>
               <th className="px-2 py-1 text-left">Lokalizacja</th>
               {hours.map((hour) => (
-                <th key={hour} className="px-4 py-1 text-center">
+                <th key={hour} className="font-si px-4 py-1 text-center">
                   {hour}
                 </th>
               ))}
@@ -137,7 +142,7 @@ export default function ScheduleGrid() {
                 <td className="px-2 py-1 text-gray-500 bg-gray-50">
                   {room.capacity}
                 </td>
-                <td className="px-2 py-1 text-gray-500 bg-gray-50">
+                <td className="text-xs px-2 py-1 text-gray-500 bg-gray-50">
                   {room.location}
                 </td>
                 {hours.map((hour) => {
@@ -158,8 +163,10 @@ export default function ScheduleGrid() {
                       key={hour}
                       className={`border px-1 py-1 text-center ${
                         res
-                          ? "bg-cyan-700 text-white"
-                          : "bg-gray-50 hover:bg-cyan-200 cursor-pointer"
+                          ? res.id_uzytkownika === currentUser?.id
+                            ? "bg-fuchsia-900 text-white"
+                            : "bg-blue-950 text-white"
+                          : "bg-gray-50 hover:bg-blue-200 cursor-pointer"
                       }`}
                       title={
                         res

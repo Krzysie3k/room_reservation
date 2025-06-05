@@ -83,7 +83,7 @@ export default function Page() {
         <div className="flex justify-center">
           <button
             type="submit"
-            className="mx-auto rounded-2xl bg-cyan-400 text-white px-4 py-2 hover:bg-purple-500 transition"
+            className="mx-auto rounded-2xl bg-blue-950 text-white px-4 py-2 hover:bg-blue-900 transition"
           >
             Zaloguj się
           </button>

@@ -45,4 +45,13 @@ export const mockReservations: Reservation[] = [
     godzina_do: "11:30",
     cel: "Test2",
   },
+  {
+    id_rezerwacji: 5,
+    id_sali: 3,
+    id_uzytkownika: 4,
+    data: "2025-06-05",
+    godzina_od: "12:00",
+    godzina_do: "13:30",
+    cel: "Test2",
+  },
 ];

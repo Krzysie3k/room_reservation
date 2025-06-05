@@ -66,7 +66,7 @@ export default function Navbar() {
 
       {/* Użytkownik i wylogowanie */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-sm text-blue-950 hover:text-blue-800">
+        <div className="flex items-center gap-2 text-sm text-blue-950 hover:text-cyan-800">
           <FaUserGraduate size={20} />
           <span className="hidden sm:inline">{user?.name}</span>
         </div>

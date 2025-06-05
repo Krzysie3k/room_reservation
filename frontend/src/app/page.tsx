@@ -16,7 +16,7 @@ export default function Page() {
     if (user) {
       localStorage.setItem("token", "mock-token");
       localStorage.setItem("user", JSON.stringify(user));
-      router.push("/rooms");
+      router.push("/schedule");
     } else {
       setError("Nieprawidłowy e-mail lub hasło");
       setUsername("");

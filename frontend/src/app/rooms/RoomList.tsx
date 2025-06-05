@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getRooms } from "@/services/roomService";
-import { Room } from "@/mock/mockRooms";
+import { getRooms } from "services/roomService";
+import { Room } from "mock/mockRooms";
 
 export default function RoomList() {
   const [rooms, setRooms] = useState<Room[]>([]);

@@ -1,4 +1,5 @@
 "use client";
+import { loginMockUser } from "services/authService";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -11,14 +12,15 @@ export default function Page() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Prosty mock: akceptujemy tylko test/test
-    if (username === "test" && password === "test") {
-      localStorage.setItem("token", "dummy-token");
+    const user = loginMockUser(username, password);
+    if (user) {
+      localStorage.setItem("token", "mock-token");
+      localStorage.setItem("user", JSON.stringify(user));
       router.push("/rooms");
     } else {
-      setError("Nieprawidłowe dane (użyj test/test)");
-      +setUsername("");
-      +setPassword("");
+      setError("Nieprawidłowy e-mail lub hasło");
+      setUsername("");
+      setPassword("");
     }
   };
 

@@ -1,4 +1,4 @@
-import { mockRooms, Room } from "@/mock/mockRooms";
+import { mockRooms, Room } from "mock/mockRooms";
 // import axios from' '@/mock/mockRooms';
 
 export async function getRooms(): Promise<Room[]> {

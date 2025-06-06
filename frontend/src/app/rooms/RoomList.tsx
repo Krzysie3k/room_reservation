@@ -20,7 +20,8 @@ export default function RoomList() {
             <th className="p-2 border">Nazwa</th>
             <th className="p-2 border">Typ</th>
             <th className="p-2 border">Pojemność</th>
-            <th className="p-2 border">Lokalizacja</th>
+            <th className="p-2 border">Budynek</th>
+            <th className="p-2 border">Piętro</th>
             <th className="p-2 border">Opis</th>
           </tr>
         </thead>
@@ -30,7 +31,8 @@ export default function RoomList() {
               <td className="p-2 border">{room.name}</td>
               <td className="p-2 border">{room.type}</td>
               <td className="p-2 border">{room.capacity}</td>
-              <td className="p-2 border">{room.location}</td>
+              <td className="p-2 border">{room.building}</td>
+              <td className="p-2 border">{room.floor}</td>
               <td className="p-2 border">{room.description}</td>
             </tr>
           ))}

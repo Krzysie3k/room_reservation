@@ -4,11 +4,11 @@
   --foreground: #171717;
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --foreground: #ededed;
   }
-}
+} */
 
 body {
   margin: 0; /* zerujemy marginesy, żeby gradient zaczął się od samej krawędzi */
@@ -21,4 +21,15 @@ body {
   );
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* datepicker styles */
+.datepicker-wrapper .react-datepicker {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.react-datepicker__header {
+  background-color: transparent !important;
+  border-bottom: none !important;
 }

@@ -6,8 +6,8 @@ import { useEffect, useState } from "react";
 import clsx from "clsx";
 import Image from "next/image";
 import { FaCalendarDay, FaChartBar, FaTable } from "react-icons/fa";
+import { RiAdminFill, RiLogoutCircleLine } from "react-icons/ri";
 import { FaUserGraduate } from "react-icons/fa6";
-import { RiLogoutCircleLine } from "react-icons/ri";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -61,6 +61,13 @@ export default function Navbar() {
           icon={<FaTable size={20} />}
         >
           Raporty
+        </NavLink>
+        <NavLink
+          href="/admin"
+          active={pathname === "/admin"}
+          icon={<RiAdminFill size={20} />}
+        >
+          Admin
         </NavLink>
       </div>
 

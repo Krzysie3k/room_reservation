@@ -38,6 +38,6 @@ export const mockUsers: User[] = [
     surname: "Testowski",
     email: "test",
     password: "test",
-    role: "wykladowca",
+    role: "admin",
   },
 ];

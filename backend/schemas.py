@@ -1,48 +1,66 @@
 from pydantic import BaseModel, EmailStr
 from datetime import date, time
+from typing import Optional, List
 
 class UserCreate(BaseModel):
-    username: str
+    first_name: str
+    last_name: str
     email: EmailStr
     password: str
-    role: str = "user"  
+    role: str
 
-class RoomCreate(BaseModel):
-    room_number: str
-    building: str
-    floor: int
-    room_capacity: int
-    equipment: str
-    status: str
-
-
-#RoomResponse do zwracania wolnych sal
-
-
-
-
-class RoomResponse(BaseModel):
+class EquipmentSchema(BaseModel):
     id: int
-    room_number: str
-    building: str
-    floor: int
-    room_capacity: int
-    equipment: str
-    status: str
+    name: str
+    description: Optional[str]
 
     class Config:
         orm_mode = True
 
-class RezerwacjaCreate(BaseModel):
-    id_sali: int
-    id_uzytkownika: int
-    data: date
-    godzina_od: time
-    godzina_do: time
-    cel: str
+class RoomCreate(BaseModel):
+    name: str
+    seat_count: int
+    description: Optional[str] = None
+    building: str
+    floor: str
+    equipment: Optional[List[int]] = []
+    type_id: Optional[int] = None
 
-class RezerwacjaResponse(RezerwacjaCreate):
-    id_rezerwacji: int
+class RoomResponse(BaseModel):
+    id: int
+    name: str
+    building: str
+    floor: Optional[str]
+    seat_count: int
+    equipment: List[EquipmentSchema] = []
+    type_id: Optional[int] = None
+    status: Optional[str] = None
 
     class Config:
-        from_attributes = True
+        orm_mode = True
+
+class ReservationCreate(BaseModel):
+    room_id: int
+    user_id: int
+    date: date
+    time_from: time
+    time_to: time
+    purpose: str
+
+class ReservationResponse(ReservationCreate):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+class RoomDetailResponse(BaseModel):
+    id: int
+    name: str
+    seat_count: int
+    building: str
+    floor: int
+    description: Optional[str]
+    equipment: List[EquipmentSchema]
+
+    class Config:
+        orm_mode = True

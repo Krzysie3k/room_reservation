@@ -3,98 +3,97 @@ from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
 
-# Tabela pośrednia dla relacji wiele-do-wielu Sala <-> Wyposażenie
-SalaWyposazenie = Table(
+room_equipment = Table(
     "sala_wyposazenie", Base.metadata,
     Column("id_sali", Integer, ForeignKey("sala.id_sali"), primary_key=True),
     Column("id_wyposazenia", Integer, ForeignKey("wyposazenie.id_wyposazenia"), primary_key=True)
 )
 
-class Uzytkownik(Base):
+class User(Base):
     __tablename__ = "uzytkownik"
-    id_uzytkownika = Column(Integer, primary_key=True, index=True)
-    imie = Column(String(255))
-    nazwisko = Column(String(255))
+    id = Column("id_uzytkownika", Integer, primary_key=True, index=True, autoincrement=True)
+    first_name = Column("imie", String(255))
+    last_name = Column("nazwisko", String(255))
     email = Column(String(255), unique=True, index=True)
-    haslo = Column(String(255))
-    rola = Column(String(255))
-    powiadomienia = relationship("Powiadomienie", back_populates="uzytkownik")
-    rezerwacje = relationship("Rezerwacja", back_populates="uzytkownik")
+    password = Column("haslo", String(255))
+    role = Column("rola", String(255))
+    notifications = relationship("Notification", back_populates="user")
+    reservations = relationship("Reservation", back_populates="user")
 
-class Powiadomienie(Base):
+class Notification(Base):
     __tablename__ = "powiadomienie"
-    id_powiadomienia = Column(Integer, primary_key=True, index=True)
-    id_uzytkownika = Column(Integer, ForeignKey("uzytkownik.id_uzytkownika"))
-    tresc = Column(Text)
-    data_wyslania = Column(DateTime)
-    przeczytane = Column(Boolean, default=False)
-    uzytkownik = relationship("Uzytkownik", back_populates="powiadomienia")
+    id = Column("id_powiadomienia", Integer, primary_key=True, index=True)
+    user_id = Column("id_uzytkownika", Integer, ForeignKey("uzytkownik.id_uzytkownika"))
+    content = Column("tresc", Text)
+    sent_at = Column("data_wyslania", DateTime)
+    read = Column("przeczytane", Boolean, default=False)
+    user = relationship("User", back_populates="notifications")
 
-class TypSali(Base):
+class RoomType(Base):
     __tablename__ = "typ_sali"
-    id_typu = Column(Integer, primary_key=True, index=True)
-    nazwa = Column(String(255))
-    sale = relationship("Sala", back_populates="typ")
+    id = Column("id_typu", Integer, primary_key=True, index=True)
+    name = Column("nazwa", String(255))
+    rooms = relationship("Room", back_populates="room_type")
 
-class Sala(Base):
+class Room(Base):
     __tablename__ = "sala"
-    id_sali = Column(Integer, primary_key=True, index=True)
-    nazwa = Column(String(255))
-    liczba_miejsc = Column(Integer)
-    id_typu = Column(Integer, ForeignKey("typ_sali.id_typu"))
-    lokalizacja = Column(String(255))
-    opis = Column(Text)
-    typ = relationship("TypSali", back_populates="sale")
-    wyposazenie = relationship("Wyposazenie", secondary=SalaWyposazenie, back_populates="sale")
-    rezerwacje = relationship("Rezerwacja", back_populates="sala")
-    awarie = relationship("Awaria", back_populates="sala")
-    przypisania_zajec = relationship("PrzypisanieZajec", back_populates="sala")
+    id = Column("id_sali", Integer, primary_key=True, index=True)
+    name = Column("nazwa", String(255))
+    seat_count = Column("liczba_miejsc", Integer)
+    type_id = Column("id_typu", Integer, ForeignKey("typ_sali.id_typu"))
+    building = Column("budynek", String)
+    floor = Column("pietro", String)
+    description = Column("opis", Text)
 
-class Wyposazenie(Base):
+    room_type = relationship("RoomType", back_populates="rooms")
+    equipment = relationship("Equipment", secondary=room_equipment, back_populates="rooms")
+    reservations = relationship("Reservation", back_populates="room")
+    malfunctions = relationship("Malfunction", back_populates="room")
+    class_assignments = relationship("ClassAssignment", back_populates="room")
+
+class Equipment(Base):
     __tablename__ = "wyposazenie"
-    id_wyposazenia = Column(Integer, primary_key=True, index=True)
-    nazwa = Column(String(255))
-    opis = Column(Text)
-    sale = relationship("Sala", secondary=SalaWyposazenie, back_populates="wyposazenie")
+    id = Column("id_wyposazenia", Integer, primary_key=True, index=True)
+    name = Column("nazwa", String(255))
+    description = Column("opis", Text)
+    rooms = relationship("Room", secondary=room_equipment, back_populates="equipment")
 
-class Rezerwacja(Base):
+class Reservation(Base):
     __tablename__ = "rezerwacja"
-    id_rezerwacji = Column(Integer, primary_key=True, index=True)
-    id_sali = Column(Integer, ForeignKey("sala.id_sali"))
-    id_uzytkownika = Column(Integer, ForeignKey("uzytkownik.id_uzytkownika"))
-    data = Column(Date)
-    godzina_od = Column(Time)
-    godzina_do = Column(Time)
-    cel = Column(Text)
-    sala = relationship("Sala", back_populates="rezerwacje")
-    uzytkownik = relationship("Uzytkownik", back_populates="rezerwacje")
+    id = Column("id_rezerwacji", Integer, primary_key=True, index=True)
+    room_id = Column("id_sali", Integer, ForeignKey("sala.id_sali"))
+    user_id = Column("id_uzytkownika", Integer, ForeignKey("uzytkownik.id_uzytkownika"))
+    date = Column("data", Date)
+    time_from = Column("godzina_od", Time)
+    time_to = Column("godzina_do", Time)
+    purpose = Column("cel", Text)
+    room = relationship("Room", back_populates="reservations")
+    user = relationship("User", back_populates="reservations")
 
-class Awaria(Base):
+class Malfunction(Base):
     __tablename__ = "awaria"
-    id_awarii = Column(Integer, primary_key=True, index=True)
-    id_sali = Column(Integer, ForeignKey("sala.id_sali"))
-    opis = Column(Text)
-    data_zgloszenia = Column(Date)
+    id = Column("id_awarii", Integer, primary_key=True, index=True)
+    room_id = Column("id_sali", Integer, ForeignKey("sala.id_sali"))
+    description = Column("opis", Text)
+    reported_date = Column("data_zgloszenia", Date)
     status = Column(String(255))
-    sala = relationship("Sala", back_populates="awarie")
+    room = relationship("Room", back_populates="malfunctions")
 
-class Zajecia(Base):
+class Class(Base):
     __tablename__ = "zajecia"
-    id_zajec = Column(Integer, primary_key=True, index=True)
-    nazwa = Column(String(255))
-    prowadzacy = Column(String(255))
-    liczba_studentow = Column(Integer)
-    przypisania = relationship("PrzypisanieZajec", back_populates="zajecia")
+    id = Column("id_zajec", Integer, primary_key=True, index=True)
+    name = Column("nazwa", String(255))
+    instructor = Column("prowadzacy", String(255))
+    student_count = Column("liczba_studentow", Integer)
+    assignments = relationship("ClassAssignment", back_populates="class_")
 
-class PrzypisanieZajec(Base):
+class ClassAssignment(Base):
     __tablename__ = "przypisanie_zajec"
-    id_przypisania = Column(Integer, primary_key=True, index=True)
-    id_zajec = Column(Integer, ForeignKey("zajecia.id_zajec"))
-    id_sali = Column(Integer, ForeignKey("sala.id_sali"))
-    dzien_tygodnia = Column(String(255))
-    godzina_od = Column(Time)
-    godzina_do = Column(Time)
-    zajecia = relationship("Zajecia", back_populates="przypisania")
-    sala = relationship("Sala", back_populates="przypisania_zajec")
-
-
+    id = Column("id_przypisania", Integer, primary_key=True, index=True)
+    class_id = Column("id_zajec", Integer, ForeignKey("zajecia.id_zajec"))
+    room_id = Column("id_sali", Integer, ForeignKey("sala.id_sali"))
+    weekday = Column("dzien_tygodnia", String(255))
+    time_from = Column("godzina_od", Time)
+    time_to = Column("godzina_do", Time)
+    class_ = relationship("Class", back_populates="assignments")
+    room = relationship("Room", back_populates="class_assignments")

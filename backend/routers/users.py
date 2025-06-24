@@ -16,13 +16,13 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
 
-    hashed_pw = get_password_hash(user.haslo)
+    hashed_pw = get_password_hash(user.password)
     new_user = User(
-        first_name=user.imie,
-        last_name=user.nazwisko,
+        first_name=user.first_name,
+        last_name=user.last_name,
         email=user.email,
         password=hashed_pw,
-        role=user.rola
+        role=user.role
     )
 
     db.add(new_user)

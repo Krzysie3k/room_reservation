@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from datetime import date, time
 from typing import Optional, List
 
@@ -10,6 +10,14 @@ class UserCreate(BaseModel):
     role: str
 
 class EquipmentSchema(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+
+    class Config:
+        orm_mode = True
+
+class TypeSchema(BaseModel):
     id: int
     name: str
     description: Optional[str]
@@ -33,7 +41,7 @@ class RoomResponse(BaseModel):
     floor: Optional[str]
     seat_count: int
     equipment: List[EquipmentSchema] = []
-    type_id: Optional[int] = None
+    type: Optional[TypeSchema] = Field(None, alias="room_type")
     status: Optional[str] = None
 
     class Config:

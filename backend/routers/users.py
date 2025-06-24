@@ -70,3 +70,19 @@ def read_current_user(current_user: User = Depends(get_current_user)):
         "email": current_user.email,
         "role": current_user.role
     }
+
+# GET ALL USERS
+@router.get("/users")
+def get_all_users(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    return [
+        {
+            "id": user.id,
+            "name": user.first_name,
+            "surname": user.last_name,
+            "email": user.email,
+            "role": user.role,
+            "password": ""  # nie wysyłaj hasła do frontu
+        }
+        for user in users
+    ]

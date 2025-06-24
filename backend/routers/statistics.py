@@ -1,53 +1,101 @@
 from fastapi import APIRouter, Depends, Response
-from sqlalchemy.orm import Session
-from sqlalchemy import func, extract
-import csv
-import io
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import distinct
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font
+from openpyxl.utils import get_column_letter
+from io import BytesIO
 import datetime
 
 from database import get_db
-from models import Reservation
-
+from models import Reservation, User, Room
 
 router = APIRouter(
     prefix="/api/report",
     tags=["report"]
 )
 
-@router.get("/csv")
-def export_reservations_csv(db: Session = Depends(get_db)):
+@router.get("/xlsx")
+def export_all_reservations(db: Session = Depends(get_db)):
     try:
-        reservations = db.query(Reservation).all()
-        output = io.StringIO()
-        writer = csv.writer(output)
+        time_slots = [
+            "08:00", "09:45", "11:30", "13:15", "15:00", "16:45", "18:30",
+        ]
 
-        writer.writerow(["ID", "Room", "User", "Start", "End"])
-        for r in reservations:
-            # Składanie daty + godziny
-            start_dt = datetime.datetime.combine(r.date, r.time_from)
-            end_dt = datetime.datetime.combine(r.date, r.time_to)
+        rooms = db.query(Room).all()
+        dates = db.query(distinct(Reservation.date)).order_by(Reservation.date).all()
+        dates = [d[0] for d in dates if d[0] is not None]
+        reservations = db.query(Reservation).options(joinedload(Reservation.user)).all()
 
-            writer.writerow([
-                r.id,
-                r.room_id,
-                r.user_id,
-                start_dt,
-                end_dt
-            ])
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Harmonogram"
 
-        response = Response(content=output.getvalue(), media_type="text/csv")
-        response.headers["Content-Disposition"] = "attachment; filename=reservations.csv"
-        return response
+        row_idx = 1
+
+        for day in dates:
+            day_str = day.strftime("%A %d.%B").capitalize()
+
+            # Dzień - scalona komórka
+            ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=2 + len(time_slots))
+            ws.cell(row=row_idx, column=1, value=f"DZIEŃ: {day_str}")
+            ws.cell(row=row_idx, column=1).font = Font(bold=True)
+            row_idx += 1
+
+            # Godziny
+            ws.cell(row=row_idx, column=1, value="SALA").font = Font(bold=True)
+            for i, slot in enumerate(time_slots):
+                ws.cell(row=row_idx, column=i + 2, value=slot).font = Font(bold=True)
+            row_idx += 1
+
+            for room in rooms:
+                ws.cell(row=row_idx, column=1, value=room.name)
+
+                for i, slot_start_str in enumerate(time_slots):
+                    slot_start = datetime.datetime.strptime(slot_start_str, "%H:%M").time()
+                    slot_end = (datetime.datetime.combine(datetime.date.today(), slot_start) + datetime.timedelta(minutes=90)).time()
+
+                    reservation = next((
+                        r for r in reservations
+                        if r.date == day and r.room_id == room.id
+                        and r.time_from and r.time_to
+                        and r.time_from < slot_end and r.time_to > slot_start
+                    ), None)
+
+                    if reservation and reservation.user and reservation.user.first_name and reservation.user.last_name:
+                        user_info = f"{reservation.user.first_name[0]}.{reservation.user.last_name}"
+                    else:
+                        user_info = ""
+
+                    cell = ws.cell(row=row_idx, column=i + 2, value=user_info)
+                    cell.alignment = Alignment(horizontal="center")
+
+                row_idx += 1
+
+            row_idx += 2
+
+        # Auto-szerokość (z poprawką na MergedCell)
+        for i, col in enumerate(ws.columns, start=1):
+            max_length = max(len(str(cell.value or "")) for cell in col)
+            col_letter = get_column_letter(i)
+            ws.column_dimensions[col_letter].width = max_length + 2
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        headers = {
+            "Content-Disposition": "attachment; filename=harmonogram_formatowany.xlsx"
+        }
+
+        return Response(
+            content=output.read(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers=headers
+        )
+
     except Exception as e:
-        print("Błąd eksportu:", e)
-        return Response(content="Błąd eksportu", status_code=500)
-
-@router.get("/count-by-room")
-def count_by_room(db: Session = Depends(get_db)):
-    result = db.query(Reservation.room_id, func.count(Reservation.id)).group_by(Reservation.room_id).all()
-    return [{"room_id": r[0], "reservation_count": r[1]} for r in result]
-
-@router.get("/count-by-user")
-def count_by_user(db: Session = Depends(get_db)):
-    result = db.query(Reservation.user_id, func.count(Reservation.id)).group_by(Reservation.user_id).all()
-    return [{"user_id": r[0], "reservation_count": r[1]} for r in result]
+        import traceback
+        print("Błąd eksportu XLSX:", e)
+        traceback.print_exc()
+        return Response(content=f"Błąd eksportu XLSX: {e}", status_code=500)

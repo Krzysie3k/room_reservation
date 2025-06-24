@@ -33,6 +33,7 @@ class RoomType(Base):
     __tablename__ = "typ_sali"
     id = Column("id_typu", Integer, primary_key=True, index=True)
     name = Column("nazwa", String(255))
+    description = Column("opis", Text)
     rooms = relationship("Room", back_populates="room_type")
 
 class Room(Base):

@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routers import users, rooms, reservation
+from routers import users, rooms, reservation,statistics
 from database import engine
 from models import Base
 
@@ -29,3 +29,4 @@ app.add_middleware(
 app.include_router(users.router)
 app.include_router(rooms.router)
 app.include_router(reservation.router)
+app.include_router(statistics.router)

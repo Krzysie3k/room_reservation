@@ -74,3 +74,13 @@ class RoomDetailResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class ScheduleEntry(BaseModel):
+    cel: str
+    prowadzacy: EmailStr
+    sala: str
+    budynek: str
+    data: date
+    godzina_od: time
+    godzina_do: time
+    liczba_studentow: int

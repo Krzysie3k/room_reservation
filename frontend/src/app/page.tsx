@@ -1,5 +1,6 @@
 "use client";
-import { loginMockUser } from "services/authService";
+
+import { login } from "services/authService";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -10,14 +11,24 @@ export default function Page() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = loginMockUser(username, password);
-    if (user) {
-      localStorage.setItem("token", "mock-token");
-      localStorage.setItem("user", JSON.stringify(user));
+    try {
+      const data = await login(username, password);
+
+      // 🟢 Zapisz token
+      localStorage.setItem("token", data.token);
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          name: data.user.first_name,
+          surname: data.user.last_name,
+        })
+      );
+
       router.push("/schedule");
-    } else {
+    } catch (err) {
       setError("Nieprawidłowy e-mail lub hasło");
       setUsername("");
       setPassword("");
@@ -42,22 +53,14 @@ export default function Page() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-300">
-            Użytkownik
+            E-mail
           </label>
           <input
-            type="text"
+            type="email"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            className=" block w-full
-                border border-cyan-50
-                rounded-md
-                px-3 py-2
-                text-gray-900
-                shadow-blue-500
-                focus:outline-none
-                focus:ring-2 focus:ring-purple-500 focus:border-transparent
-                transition"
+            className="block w-full border border-cyan-50 rounded-md px-3 py-2 text-gray-900 shadow-blue-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
           />
         </div>
         <div>
@@ -69,15 +72,7 @@ export default function Page() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className=" block w-full
-                border border-cyan-50
-                rounded-md
-                px-3 py-2
-                text-gray-900
-                shadow-blue-500
-                focus:outline-none
-                focus:ring-2 focus:ring-purple-500 focus:border-transparent
-                transition"
+            className="block w-full border border-cyan-50 rounded-md px-3 py-2 text-gray-900 shadow-blue-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
           />
         </div>
         <div className="flex justify-center">
@@ -86,6 +81,33 @@ export default function Page() {
             className="mx-auto rounded-2xl bg-blue-950 text-white px-4 py-2 hover:bg-blue-900 transition"
           >
             Zaloguj się
+          </button>
+        </div>
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => router.push("/register")}
+            className="mt-4 text-sm text-blue-900 "
+          >
+            <div className="flex justify-center">
+              <button
+                type="button"
+                disabled
+                title="Opcja będzie dostępna w przyszłości"
+                className="mt-4 flex items-center gap-2 px-4 py-2 border border-gray-300 rounded shadow-sm bg-white text-gray-700 cursor-not-allowed hover:bg-gray-100 transition"
+              >
+                <Image
+                  src="/microsoft_logo.svg"
+                  alt="Microsoft logo"
+                  width={20}
+                  height={20}
+                />
+                <span>Zaloguj się Microsoft</span>
+              </button>
+            </div>
+            <p className="mt-4 text-sm text-blue-900 hover:underline">
+              Nie masz konta? Zarejestruj się
+            </p>
           </button>
         </div>
       </form>

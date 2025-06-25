@@ -16,9 +16,16 @@ export default function Navbar() {
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
-    if (stored) {
+    if (!stored) return;
+
+    try {
       const parsed = JSON.parse(stored);
-      setUser({ name: `${parsed.name} ${parsed.surname}` });
+      if (parsed && parsed.name && parsed.surname) {
+        setUser({ name: `${parsed.name} ${parsed.surname}` });
+      }
+    } catch (e) {
+      console.error("Błąd parsowania user z localStorage:", e);
+      setUser(null);
     }
   }, []);
 

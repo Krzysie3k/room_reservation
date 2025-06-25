@@ -31,6 +31,9 @@ export default function ScheduleGrid() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<any | null>(
+    null
+  );
 
   // 👇 Zmieniamy kolejność – te stany muszą być wcześniej
   const [rooms, setRooms] = useState<any[]>([]);
@@ -93,13 +96,45 @@ export default function ScheduleGrid() {
             <h2 className="text-lg font-bold mb-2 text-gray-700">
               Rezerwacja sali
             </h2>
-            <p className="text-sm text-gray-700 mb-4">
-              Sala: <strong>{selectedSlot.roomName}</strong>
-              <br />
-              Godzina: <strong>{selectedSlot.hour}</strong>
-              <br />
-              Data: <strong>{selectedSlot.date}</strong>
-            </p>
+            <div className="mb-3 flex items-center gap-2">
+              <label className="w-20 text-sm text-gray-700">Data:</label>
+              <DatePicker
+                selected={new Date(selectedSlot.date)}
+                onChange={(date) =>
+                  date &&
+                  setSelectedSlot((prev) =>
+                    prev ? { ...prev, date: format(date, "yyyy-MM-dd") } : null
+                  )
+                }
+                locale="pl"
+                dateFormat="yyyy-MM-dd"
+                className="flex-1 border px-2 py-1 rounded"
+              />
+            </div>
+
+            <div className="mb-3 flex items-center gap-2">
+              <label className="w-20 text-sm text-gray-700">Godzina:</label>
+              <select
+                value={selectedSlot.hour}
+                onChange={(e) =>
+                  setSelectedSlot((prev) =>
+                    prev ? { ...prev, hour: e.target.value } : null
+                  )
+                }
+                className="flex-1 border px-2 py-1 rounded"
+              >
+                {hours.map((h) => (
+                  <option key={h} value={h}>
+                    {h}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4 flex items-start gap-2">
+              <label className="w-20 text-sm text-gray-700 pt-2">Cel:</label>
+            </div>
+
             <input
               type="text"
               className="w-full border px-3 py-2 mb-4 rounded text-gray-600"
@@ -135,8 +170,13 @@ export default function ScheduleGrid() {
 
                   // console.log("📦 Payload do wysłania:", payload);
 
-                  fetch("http://localhost:8000/reservations", {
-                    method: "POST",
+                  const method = selectedReservation ? "PUT" : "POST";
+                  const url = selectedReservation
+                    ? `http://localhost:8000/reservations/${selectedReservation.id}`
+                    : `http://localhost:8000/reservations`;
+
+                  fetch(url, {
+                    method,
                     headers: {
                       "Content-Type": "application/json",
                     },
@@ -158,11 +198,99 @@ export default function ScheduleGrid() {
                     });
 
                   setSelectedSlot(null);
+                  setSelectedReservation(null);
                 }}
                 className="px-3 py-1 bg-blue-950 text-white rounded hover:bg-blue-700"
               >
                 Rezerwuj
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {selectedReservation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-sm">
+            <h2 className="text-lg font-bold mb-2 text-gray-700">
+              Szczegóły rezerwacji
+            </h2>
+            <p className="text-sm text-gray-700 mb-4">
+              Sala:{" "}
+              <strong>
+                {rooms.find((r) => r.id === selectedReservation.room_id)?.name}
+              </strong>
+              <br />
+              Data: <strong>{selectedReservation.date}</strong>
+              <br />
+              Godzina:{" "}
+              <strong>
+                {selectedReservation.time_from}–{selectedReservation.time_to}
+              </strong>
+              <br />
+              Cel: <strong>{selectedReservation.purpose}</strong>
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setSelectedReservation(null)}
+                className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Zamknij
+              </button>
+
+              {new Date(
+                `${selectedReservation.date}T${selectedReservation.time_from}`
+              ) > new Date() && (
+                <>
+                  <button
+                    onClick={() => {
+                      // Przejście do edycji – np. ustawiamy selectedSlot, żeby użyć tego samego formularza
+                      const room = rooms.find(
+                        (r) => r.id === selectedReservation.room_id
+                      );
+                      if (!room) return;
+                      setSelectedSlot({
+                        roomName: room.name,
+                        hour: selectedReservation.time_from,
+                        date: selectedReservation.date,
+                      });
+                      setReservationPurpose(selectedReservation.purpose);
+                      setSelectedReservation(null); // zamknij ten modal
+                    }}
+                    className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                  >
+                    Edytuj
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      fetch(
+                        `http://localhost:8000/reservations/${selectedReservation.id}`,
+                        {
+                          method: "DELETE",
+                        }
+                      )
+                        .then((res) => {
+                          if (!res.ok) throw new Error("Błąd usuwania");
+                          return fetch(
+                            "http://localhost:8000/reservations"
+                          ).then((r) => r.json());
+                        })
+                        .then((data) => {
+                          setReservations(data);
+                          setSelectedReservation(null);
+                        })
+                        .catch((err) => {
+                          console.error("❌ Błąd anulowania rezerwacji:", err);
+                          alert("Nie udało się anulować rezerwacji.");
+                        });
+                    }}
+                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    Anuluj
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -238,7 +366,8 @@ export default function ScheduleGrid() {
                 return (
                   <li
                     key={res.id}
-                    className="bg-indigo-900 text-white rounded-lg px-3 py-3 shadow-sm border border-blue-200 hover:bg-blue-800"
+                    onClick={() => setSelectedReservation(res)}
+                    className="cursor-pointer bg-indigo-900 text-white rounded-lg px-3 py-3 shadow-sm border border-blue-200 hover:bg-blue-800"
                   >
                     <div className="text-xs font-medium flex items-center gap-1">
                       <FaCalendarDay className="text-blue-200" />
@@ -343,7 +472,7 @@ export default function ScheduleGrid() {
                             className={`border border-gray-100 px-1 py-1 text-center rounded-lg ${
                               res
                                 ? res.user_id === currentUser?.id
-                                  ? "bg-fuchsia-900 text-white"
+                                  ? "bg-fuchsia-900 text-white cursor-pointer"
                                   : "bg-blue-950 text-white"
                                 : "bg-gray-50 hover:bg-blue-200 cursor-pointer"
                             }`}
@@ -353,7 +482,11 @@ export default function ScheduleGrid() {
                                 : `Sala ${room.name} dostępna o ${hour}`
                             }
                             onClick={() => {
-                              if (!res) {
+                              if (res) {
+                                if (res.user_id === currentUser?.id) {
+                                  setSelectedReservation(res); // klikam w swoją rezerwację → podgląd
+                                }
+                              } else {
                                 setSelectedSlot({
                                   roomName: room.name,
                                   hour,

@@ -88,3 +88,13 @@ def send_reservation_cancelled(to_email: str, room_name: str, date: str, time_fr
         message="Twoja rezerwacja została anulowana."
     )
     _send_email(subject, text_body, html_body, to_email)
+
+def send_reservation_reminder(to_email: str, room_name: str, date: str, time_from: str, time_to: str):
+    subject = "Przypomnienie o rezerwacji sali"
+    text_body = f"Przypominamy, że Twoja rezerwacja sali {room_name} rozpoczyna się o {time_from} w dniu {date}."
+    html_body = _compose_html(
+        room_name, date, time_from, time_to,
+        title="Przypomnienie o rezerwacji",
+        message="Niedługo rozpoczyna się Twoja rezerwacja sali."
+    )
+    _send_email(subject, text_body, html_body, to_email)

@@ -68,6 +68,7 @@ class Reservation(Base):
     time_from = Column("godzina_od", Time)
     time_to = Column("godzina_do", Time)
     purpose = Column("cel", Text)
+    notification = Column("powiadomienie", Integer, default=0)
     room = relationship("Room", back_populates="reservations")
     user = relationship("User", back_populates="reservations")
 

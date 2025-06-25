@@ -35,7 +35,8 @@ def create_reservation(reservation: ReservationCreate, db: Session = Depends(get
         date=reservation.date,
         time_from=reservation.time_from,
         time_to=reservation.time_to,
-        purpose=reservation.purpose
+        purpose=reservation.purpose,
+        notification=False
     )
     db.add(db_reservation)
     db.commit()
@@ -129,6 +130,7 @@ def update_reservation(
     reservation.time_from = reservation_data.time_from
     reservation.time_to = reservation_data.time_to
     reservation.purpose = reservation_data.purpose
+    reservation.notification = False
 
     db.commit()
     db.refresh(reservation)

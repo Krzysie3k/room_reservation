@@ -3,7 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routers import users, rooms, reservation,statistics
+from routers import users, rooms, reservation, statistics
+from utils.scheduler import start_scheduler
 from database import engine
 from models import Base
 
@@ -30,3 +31,6 @@ app.include_router(users.router)
 app.include_router(rooms.router)
 app.include_router(reservation.router)
 app.include_router(statistics.router)
+
+# Start APScheduler
+start_scheduler()

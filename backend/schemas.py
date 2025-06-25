@@ -54,9 +54,11 @@ class ReservationCreate(BaseModel):
     time_from: time
     time_to: time
     purpose: str
+    notification: Optional[bool] = False
 
 class ReservationResponse(ReservationCreate):
     id: int
+    notification: bool
 
     class Config:
         orm_mode = True

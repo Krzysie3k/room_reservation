@@ -13,6 +13,14 @@ from utils.notification import (
 
 router = APIRouter()
 
+from typing import List
+
+# GET /reservations – pobieranie wszystkich rezerwacji
+@router.get("/reservations", response_model=List[ReservationResponse])
+def get_all_reservations(db: Session = Depends(get_db)):
+    return db.query(Reservation).all()
+
+
 # CREATE RESERVATION
 @router.post("/reservations", response_model=ReservationResponse)
 def create_reservation(reservation: ReservationCreate, db: Session = Depends(get_db)):

@@ -4,9 +4,6 @@ import { FaCalendarDay } from "react-icons/fa";
 import "react-datepicker/dist/react-datepicker.css";
 import { useEffect, useState } from "react";
 import { format, addDays, subDays } from "date-fns";
-import { mockReservations } from "@/mock/mockReservations";
-import { mockRooms } from "@/mock/mockRooms";
-import { mockUsers } from "@/mock/mockUsers";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { pl } from "date-fns/locale";
 registerLocale("pl", pl);
@@ -16,6 +13,11 @@ const hours = ["08:00", "09:45", "11:30", "13:30", "15:15", "17:00", "18:45"];
 function toMinutes(time: string): number {
   const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
+}
+
+function getNextHour(hour: string): string {
+  const index = hours.indexOf(hour);
+  return index >= 0 && index < hours.length - 1 ? hours[index + 1] : "20:30";
 }
 
 export default function ScheduleGrid() {
@@ -30,6 +32,11 @@ export default function ScheduleGrid() {
   const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
+  // 👇 Zmieniamy kolejność – te stany muszą być wcześniej
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+
   useEffect(() => {
     const stored = localStorage.getItem("user");
     if (stored) {
@@ -37,17 +44,45 @@ export default function ScheduleGrid() {
     }
   }, []);
 
+  useEffect(() => {
+    fetch("http://localhost:8000/rooms")
+      .then((res) => res.json())
+      .then((data) => setRooms(data));
+
+    fetch("http://localhost:8000/reservations")
+      .then((res) => res.json())
+      .then((data) => setReservations(data));
+
+    fetch("http://localhost:8000/users")
+      .then((res) => res.json())
+      .then((data) => setUsers(data));
+  }, []);
+  if (
+    !Array.isArray(reservations) ||
+    !Array.isArray(rooms) ||
+    !Array.isArray(users)
+  ) {
+    return <div>Ładowanie danych...</div>;
+  }
+
   const formattedDate = format(currentDate, "EEEE, d MMMM yyyy", {
     locale: pl,
   });
   const dateKey = format(currentDate, "yyyy-MM-dd");
 
-  const userReservations = mockReservations.filter(
-    (r) => r.id_uzytkownika === currentUser?.id
-  );
+  const userReservations = Array.isArray(reservations)
+    ? reservations.filter((r) => {
+        if (r.user_id !== currentUser?.id) return false;
 
-  const uniqueBuildings = Array.from(new Set(mockRooms.map((r) => r.building)));
-  const uniqueTypes = Array.from(new Set(mockRooms.map((r) => r.type)));
+        const resEnd = new Date(`${r.date}T${r.time_to}`);
+        return resEnd >= new Date(); // tylko przyszłe lub trwające
+      })
+    : [];
+
+  const uniqueBuildings = Array.from(new Set(rooms.map((r) => r.building)));
+  const uniqueTypes = Array.from(
+    new Set(rooms.map((r) => r.room_type?.name).filter(Boolean))
+  );
 
   return (
     <>
@@ -81,10 +116,47 @@ export default function ScheduleGrid() {
               </button>
               <button
                 onClick={() => {
-                  console.log("Rezerwuję:", {
-                    ...selectedSlot,
-                    cel: reservationPurpose,
-                  });
+                  const roomId = rooms.find(
+                    (r) => r.name === selectedSlot.roomName
+                  )?.id;
+                  if (!roomId || !currentUser?.id) {
+                    alert("Brakuje danych do rezerwacji.");
+                    return;
+                  }
+
+                  const payload = {
+                    room_id: roomId,
+                    user_id: currentUser.id,
+                    date: selectedSlot.date,
+                    time_from: selectedSlot.hour,
+                    time_to: getNextHour(selectedSlot.hour),
+                    purpose: reservationPurpose,
+                  };
+
+                  // console.log("📦 Payload do wysłania:", payload);
+
+                  fetch("http://localhost:8000/reservations", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(payload),
+                  })
+                    .then((res) => {
+                      if (!res.ok) throw new Error("Błąd zapisu");
+                      return res.json();
+                    })
+                    .then((data) => {
+                      // Po udanym zapisie – odśwież dane z backendu
+                      fetch("http://localhost:8000/reservations")
+                        .then((res) => res.json())
+                        .then((data) => setReservations(data));
+                    })
+                    .catch((err) => {
+                      console.error("❌ Błąd zapisu rezerwacji:", err);
+                      alert("Nie udało się zapisać rezerwacji.");
+                    });
+
                   setSelectedSlot(null);
                 }}
                 className="px-3 py-1 bg-blue-950 text-white rounded hover:bg-blue-700"
@@ -126,8 +198,8 @@ export default function ScheduleGrid() {
                 className="w-full text-xs p-1 border border-gray-300 rounded"
               >
                 <option value="">Wszystkie</option>
-                {uniqueBuildings.map((b) => (
-                  <option key={b} value={b}>
+                {uniqueBuildings.map((b, index) => (
+                  <option key={`building-${index}`} value={b}>
                     {b}
                   </option>
                 ))}
@@ -143,8 +215,8 @@ export default function ScheduleGrid() {
                 className="w-full text-xs p-1 border border-gray-300 rounded"
               >
                 <option value="">Wszystkie</option>
-                {uniqueTypes.map((t) => (
-                  <option key={t} value={t}>
+                {uniqueTypes.map((t, index) => (
+                  <option key={`type-${index}`} value={t}>
                     {t}
                   </option>
                 ))}
@@ -162,24 +234,24 @@ export default function ScheduleGrid() {
                 <li className="text-xs text-gray-600">Brak rezerwacji</li>
               )}
               {userReservations.map((res) => {
-                const room = mockRooms.find((r) => r.id === res.id_sali);
+                const room = rooms.find((r) => r.id === res.room_id);
                 return (
                   <li
-                    key={res.id_rezerwacji}
+                    key={res.id}
                     className="bg-indigo-900 text-white rounded-lg px-3 py-3 shadow-sm border border-blue-200 hover:bg-blue-800"
                   >
                     <div className="text-xs font-medium flex items-center gap-1">
                       <FaCalendarDay className="text-blue-200" />
                       <span>
-                        {format(new Date(res.data), "P", { locale: pl })} –{" "}
-                        {res.godzina_od}–{res.godzina_do}
+                        {format(new Date(res.date), "P", { locale: pl })} –{" "}
+                        {res.time_from}–{res.time_to}
                       </span>
                     </div>
                     <div className="text-sm font-bold mt-1">
                       Sala {room?.name || "?"}
                     </div>
                     <div className="text-xs italic text-blue-200">
-                      {res.cel}
+                      {res.purpose}
                     </div>
                   </li>
                 );
@@ -232,12 +304,12 @@ export default function ScheduleGrid() {
                 </tr>
               </thead>
               <tbody>
-                {mockRooms
+                {rooms
                   .filter(
                     (room) =>
                       (!selectedBuilding ||
                         room.building === selectedBuilding) &&
-                      (!selectedType || room.type === selectedType)
+                      (!selectedType || room.room_type?.name === selectedType)
                   )
                   .map((room) => (
                     <tr key={room.id} className="h-12">
@@ -245,7 +317,7 @@ export default function ScheduleGrid() {
                         {room.name}
                       </td>
                       <td className="bg-gray-50 text-gray-500 px-2 py-1">
-                        {room.capacity}
+                        {room.seat_count}
                       </td>
                       <td className="bg-gray-50 text-gray-500 px-2 py-1 text-xs">
                         {room.building}
@@ -254,15 +326,15 @@ export default function ScheduleGrid() {
                         {room.floor}
                       </td>
                       {hours.map((hour) => {
-                        const res = mockReservations.find(
+                        const res = reservations.find(
                           (r) =>
-                            r.id_sali === room.id &&
-                            r.data === dateKey &&
-                            toMinutes(r.godzina_od) <= toMinutes(hour) &&
-                            toMinutes(r.godzina_do) > toMinutes(hour)
+                            r.room_id === room.id &&
+                            r.date === dateKey &&
+                            toMinutes(r.time_from) <= toMinutes(hour) &&
+                            toMinutes(r.time_to) > toMinutes(hour)
                         );
                         const user = res
-                          ? mockUsers.find((u) => u.id === res.id_uzytkownika)
+                          ? users.find((u) => u.id === res.user_id)
                           : null;
 
                         return (
@@ -270,14 +342,14 @@ export default function ScheduleGrid() {
                             key={hour}
                             className={`border border-gray-100 px-1 py-1 text-center rounded-lg ${
                               res
-                                ? res.id_uzytkownika === currentUser?.id
+                                ? res.user_id === currentUser?.id
                                   ? "bg-fuchsia-900 text-white"
                                   : "bg-blue-950 text-white"
                                 : "bg-gray-50 hover:bg-blue-200 cursor-pointer"
                             }`}
                             title={
                               res
-                                ? `Zajęte: ${res.godzina_od}–${res.godzina_do}\n${res.cel}`
+                                ? `Zajęte: ${res.time_from}–${res.time_to}\n${res.purpose}`
                                 : `Sala ${room.name} dostępna o ${hour}`
                             }
                             onClick={() => {
@@ -298,7 +370,7 @@ export default function ScheduleGrid() {
                                     ? `${user.name.charAt(0)}. ${user.surname}`
                                     : "Nieznany"}
                                 </span>
-                                <span>{res.cel}</span>
+                                <span>{res.purpose}</span>
                               </div>
                             )}
                           </td>

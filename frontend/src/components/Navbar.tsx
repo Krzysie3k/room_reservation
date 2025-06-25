@@ -12,7 +12,7 @@ import { FaUserGraduate } from "react-icons/fa6";
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<{ name: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -21,7 +21,10 @@ export default function Navbar() {
     try {
       const parsed = JSON.parse(stored);
       if (parsed && parsed.name && parsed.surname) {
-        setUser({ name: `${parsed.name} ${parsed.surname}` });
+        setUser({
+          name: `${parsed.name} ${parsed.surname}`,
+          role: parsed.role,
+        });
       }
     } catch (e) {
       console.error("Błąd parsowania user z localStorage:", e);
@@ -48,36 +51,48 @@ export default function Navbar() {
 
       {/* Menu */}
       <div className="flex gap-8">
-        <NavLink
-          href="/schedule"
-          active={pathname === "/schedule"}
-          icon={<FaCalendarDay size={20} />}
-        >
-          Kalendarz
-        </NavLink>
-        <NavLink
-          href="/dashboard"
-          active={pathname === "/dashboard"}
-          icon={<FaChartBar size={20} />}
-        >
-          Dashboard
-        </NavLink>
-        <NavLink
-          href="/reports"
-          active={pathname === "/reports"}
-          icon={<FaTable size={20} />}
-        >
-          Raporty
-        </NavLink>
-        <NavLink
-          href="/admin"
-          active={pathname === "/admin"}
-          icon={<RiAdminFill size={20} />}
-        >
-          Admin
-        </NavLink>
-      </div>
+        {(user?.role === "student" ||
+          user?.role === "admin" ||
+          user?.role === "wykladowca") && (
+          <NavLink
+            href="/schedule"
+            active={pathname === "/schedule"}
+            icon={<FaCalendarDay size={20} />}
+          >
+            Kalendarz
+          </NavLink>
+        )}
 
+        {(user?.role === "wykladowca" || user?.role === "admin") && (
+          <NavLink
+            href="/dashboard"
+            active={pathname === "/dashboard"}
+            icon={<FaChartBar size={20} />}
+          >
+            Dashboard
+          </NavLink>
+        )}
+
+        {(user?.role === "wykladowca" || user?.role === "admin") && (
+          <NavLink
+            href="/reports"
+            active={pathname === "/reports"}
+            icon={<FaTable size={20} />}
+          >
+            Raporty
+          </NavLink>
+        )}
+
+        {user?.role === "admin" && (
+          <NavLink
+            href="/admin"
+            active={pathname === "/admin"}
+            icon={<RiAdminFill size={20} />}
+          >
+            Admin
+          </NavLink>
+        )}
+      </div>
       {/* Użytkownik i wylogowanie */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 text-sm text-blue-950 hover:text-blue-900">

@@ -22,8 +22,10 @@ export default function Page() {
       localStorage.setItem(
         "user",
         JSON.stringify({
+          id: data.user.id,
           name: data.user.first_name,
           surname: data.user.last_name,
+          role: data.user.role,
         })
       );
 
@@ -84,10 +86,9 @@ export default function Page() {
           </button>
         </div>
         <div className="flex justify-center">
-          <button
-            type="button"
+          <div
             onClick={() => router.push("/register")}
-            className="mt-4 text-sm text-blue-900 "
+            className="mt-4 text-sm text-blue-900 cursor-pointer"
           >
             <div className="flex justify-center">
               <button
@@ -108,7 +109,7 @@ export default function Page() {
             <p className="mt-4 text-sm text-blue-900 hover:underline">
               Nie masz konta? Zarejestruj się
             </p>
-          </button>
+          </div>
         </div>
       </form>
     </div>

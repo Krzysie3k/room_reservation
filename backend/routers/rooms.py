@@ -4,8 +4,57 @@ from schemas import RoomCreate, RoomResponse
 from database import get_db
 from dependencies import get_current_user
 from models import Room, User, Equipment
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from database import get_db
+from models import Room, Equipment, RoomType
+from schemas import RoomResponse
+
+
+
+
+
 
 router = APIRouter()
+
+
+
+
+
+#FILTROWANIE SALI
+
+
+@router.get("/rooms/filter", response_model=List[RoomResponse])
+def filter_rooms(
+    building: Optional[str] = None,
+    room_type: Optional[str] = None,
+    equipment: Optional[List[str]] = Query(None),
+    min_seat_count: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Room)
+
+    if building:
+        query = query.filter(Room.building == building)
+
+    if min_seat_count:
+        query = query.filter(Room.seat_count >= min_seat_count)
+
+    if room_type:
+        query = query.join(Room.room_type).filter(RoomType.name == room_type)
+
+    if equipment:
+        for equip in equipment:
+            query = query.filter(Room.equipment.any(Equipment.name == equip))
+
+    rooms = query.all()
+
+    return rooms
+
+
+
+
 
 # CREATE NEW ROOM
 @router.post("/rooms")

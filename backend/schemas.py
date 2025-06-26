@@ -9,6 +9,13 @@ class UserCreate(BaseModel):
     password: str
     role: str
 
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    role: Optional[str] = None
+
 class EquipmentSchema(BaseModel):
     id: int
     name: str

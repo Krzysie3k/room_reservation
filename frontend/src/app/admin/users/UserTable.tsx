@@ -4,8 +4,8 @@ import React from "react";
 
 type User = {
   id: number;
-  name: string;
-  surname: string;
+  first_name: string;
+  last_name: string;
   email: string;
   role: string;
 };
@@ -33,7 +33,7 @@ export default function UserTable({ users }: { users: User[] }) {
         {users.map((user) => (
           <tr key={user.id} className="border-t border border-gray-200">
             <td className="p-3">
-              {user.name} {user.surname}
+              {user.first_name} {user.last_name}
             </td>
             <td className="p-3">{user.email}</td>
             <td className="p-3">{user.role}</td>
@@ -76,7 +76,7 @@ function EditUserForm({
   };
 
   const handleSubmit = async () => {
-    await fetch(`/api/users/${user.id}`, {
+    await fetch(`http://localhost:8000/users/${user.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData),});
@@ -86,29 +86,33 @@ function EditUserForm({
   return (
     <div>
       <input
-        name="name"
-        value={formData.name}
+        name="first_name"
+        value={formData.first_name}
         onChange={handleChange}
         className="w-full border p-2 rounded mb-3"
-        placeholder="Imię"/>
+        placeholder="Imię"
+      />
       <input
-        name="surname"
-        value={formData.surname}
+        name="last_name"
+        value={formData.last_name}
         onChange={handleChange}
         className="w-full border p-2 rounded mb-3"
-        placeholder="Nazwisko"/>
+        placeholder="Nazwisko"
+      />
       <input
         name="email"
         value={formData.email}
         onChange={handleChange}
         className="w-full border p-2 rounded mb-3"
-        placeholder="Email"/>
+        placeholder="Email"
+      />
       <input
         name="role"
         value={formData.role}
         onChange={handleChange}
         className="w-full border p-2 rounded mb-3"
-        placeholder="Rola"/>
+        placeholder="Rola"
+      />
 
       <div className="flex justify-end gap-2 mt-4">
         <button

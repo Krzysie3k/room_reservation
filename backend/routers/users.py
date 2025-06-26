@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from schemas import UserCreate
+from schemas import UserCreate, UserUpdate
 from models import User
 from database import get_db
 from fastapi.security import OAuth2PasswordRequestForm
@@ -43,6 +43,40 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "id": user.id,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "role": user.role
+    }
+
+# USER UPDATE
+@router.put("/users/{user_id}")
+def update_user(user_id: int, updated_data: UserUpdate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if updated_data.email and updated_data.email != user.email:
+        email_taken = db.query(User).filter(User.email == updated_data.email).first()
+        if email_taken:
+            raise HTTPException(status_code=400, detail="Email already in use")
+
+    if updated_data.first_name is not None:
+        user.first_name = updated_data.first_name
+    if updated_data.last_name is not None:
+        user.last_name = updated_data.last_name
+    if updated_data.email is not None:
+        user.email = updated_data.email
+    if updated_data.role is not None:
+        user.role = updated_data.role
+    if updated_data.password is not None:
+        user.password = get_password_hash(updated_data.password)
+
+    db.commit()
+    db.refresh(user)
+
     return {
         "id": user.id,
         "first_name": user.first_name,

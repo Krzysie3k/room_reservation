@@ -11,7 +11,9 @@ from utils.notification import (
     send_reservation_cancelled,
 )
 
-router = APIRouter()
+router = APIRouter(
+    tags=["reservation"]
+)
 
 from typing import List
 

@@ -7,7 +7,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 from auth import verify_password, create_access_token, get_password_hash
 from dependencies import get_current_user
 
-router = APIRouter()
+router = APIRouter(
+    tags=["users"]
+)
 
 # USER REGISTRATION
 @router.post("/register")

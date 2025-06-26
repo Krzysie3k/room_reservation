@@ -3,8 +3,10 @@ from typing import Dict, Any
 from models import User, Reservation
 
 REQUIRED_FIELDS = ["cel", "prowadzacy", "sala", "budynek", "data", "godzina_od", "godzina_do", "liczba_studentow"]
+REQUIRED_CLASS_FIELDS = ["nazwa", "prowadzacy", "liczba_studentow", "dzien_tygodnia", "godzina_od", "godzina_do", "budynek", "sala"]
+VALID_WEEKDAYS = ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]
 
-def validate_schedule_entry(entry: Dict[str, Any], db) -> None:
+def validate_reservation_entry(entry: Dict[str, Any], db) -> None:
     # Sprawdzenie, czy są wszystkie klucze
     for field in REQUIRED_FIELDS:
         if field not in entry:
@@ -49,3 +51,32 @@ def validate_schedule_entry(entry: Dict[str, Any], db) -> None:
     ).first()
     if conflict:
         raise ValueError(f"Prowadzący {entry['prowadzacy']} ma już rezerwację w tym czasie")
+    
+
+def validate_class_entry(entry: Dict[str, Any], db) -> None:
+    for field in REQUIRED_CLASS_FIELDS:
+        if field not in entry:
+            raise ValueError(f"Brak wymaganego pola: {field}")
+
+    if entry["dzien_tygodnia"].lower() not in VALID_WEEKDAYS:
+        raise ValueError(f"Niepoprawny dzień tygodnia: {entry['dzien_tygodnia']}")
+
+    try:
+        time_from = datetime.strptime(entry["godzina_od"], "%H:%M").time()
+        time_to = datetime.strptime(entry["godzina_do"], "%H:%M").time()
+    except ValueError:
+        raise ValueError("Niepoprawny format godziny, oczekiwany HH:MM")
+
+    if time_from >= time_to:
+        raise ValueError("godzina_od musi być wcześniej niż godzina_do")
+
+    if not isinstance(entry["liczba_studentow"], int) or entry["liczba_studentow"] <= 0:
+        raise ValueError("liczba_studentow musi być dodatnią liczbą całkowitą")
+
+    if str(entry["sala"]) != "0":
+        if not isinstance(entry["sala"], str) or len(entry["sala"].strip()) == 0:
+            raise ValueError("Pole sala musi być '0' lub nazwą sali")
+
+    user = db.query(User).filter(User.email == entry["prowadzacy"]).first()
+    if not user:
+        raise ValueError(f"Prowadzący {entry['prowadzacy']} nie istnieje w bazie danych")

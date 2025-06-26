@@ -19,6 +19,7 @@ class User(Base):
     role = Column("rola", String(255))
     notifications = relationship("Notification", back_populates="user")
     reservations = relationship("Reservation", back_populates="user")
+    classes = relationship("Class", back_populates="instructor")
 
 class Notification(Base):
     __tablename__ = "powiadomienie"
@@ -85,8 +86,9 @@ class Class(Base):
     __tablename__ = "zajecia"
     id = Column("id_zajec", Integer, primary_key=True, index=True)
     name = Column("nazwa", String(255))
-    instructor = Column("prowadzacy", String(255))
+    instructor_id = Column("id_prowadzacego", Integer, ForeignKey("uzytkownik.id_uzytkownika"))
     student_count = Column("liczba_studentow", Integer)
+    instructor = relationship("User")
     assignments = relationship("ClassAssignment", back_populates="class_")
 
 class ClassAssignment(Base):

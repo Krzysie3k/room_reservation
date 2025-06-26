@@ -16,7 +16,9 @@ from schemas import RoomResponse
 
 
 
-router = APIRouter()
+router = APIRouter(
+    tags=["rooms"]
+)
 
 
 

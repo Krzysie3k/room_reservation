@@ -95,6 +95,7 @@ function EditUserForm({
     });
 
     onSave();
+    window.location.reload();
   };
 
   return (
@@ -131,12 +132,14 @@ function EditUserForm({
       <div className="flex justify-end gap-2 mt-4">
         <button
           onClick={onClose}
-          className="px-4 py-2 border rounded hover:bg-gray-100 text-gray-600">
+          className="px-4 py-2 border rounded hover:bg-gray-100 text-gray-600"
+        >
           Anuluj
         </button>
         <button
           onClick={handleSubmit}
-          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded">
+          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded"
+        >
           Zapisz
         </button>
       </div>

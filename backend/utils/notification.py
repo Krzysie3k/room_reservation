@@ -1,9 +1,10 @@
+import os
+import ssl
 import smtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
@@ -34,13 +35,12 @@ def _send_email(subject: str, text_body: str, html_body: str, to_email: str):
     img.add_header('Content-Disposition', 'inline', filename=os.path.basename(LOGO_PATH))
     message.attach(img)
 
+    context = ssl.create_default_context()
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.ehlo()
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.send_message(message)
-        server.quit()
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
+            server.login(smtp_user, smtp_password)
+            server.send_message(message)
+        print("✅ Email wysłany!")
     except Exception as e:
         print("❌ Błąd podczas wysyłania maila:", e)
 

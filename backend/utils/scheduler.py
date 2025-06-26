@@ -4,6 +4,14 @@ from datetime import datetime, timedelta
 from database import SessionLocal
 from models import Reservation, User, Room
 from utils.notification import send_reservation_reminder
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 def check_upcoming_reservations():
     db: Session = SessionLocal()
@@ -11,17 +19,19 @@ def check_upcoming_reservations():
         now = datetime.now()
         target_start = now + timedelta(minutes=60)
         target_end = now + timedelta(minutes=90)
-
         today = now.date()
 
         reservations = db.query(Reservation).filter(
             Reservation.date == today,
-            Reservation.time_from >= target_start.time(),
-            Reservation.time_from < target_end.time(),
             Reservation.notification == False
         ).all()
 
-        for res in reservations:
+        to_notify = [
+            res for res in reservations
+            if target_start <= datetime.combine(res.date, res.time_from) < target_end
+        ]
+
+        for res in to_notify:
             user = db.query(User).filter(User.id == res.user_id).first()
             room = db.query(Room).filter(Room.id == res.room_id).first()
             if user and room:
@@ -36,12 +46,16 @@ def check_upcoming_reservations():
                     res.notification = True
                     db.commit()
                 except Exception as e:
-                    print(f"❌ Błąd podczas wysyłania maila do {user.email}: {e}")
+                    logger.error("Błąd podczas wysyłania maila do %s: %s", user.email, e)
+            else:
+                logger.warning("Brak użytkownika lub sali dla rezerwacji ID %d", res.id)
+    except Exception as e:
+        logger.error("Błąd w funkcji check_upcoming_reservations: %s", e)
     finally:
         db.close()
 
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(check_upcoming_reservations, 'interval', minutes=10)
+    scheduler.add_job(check_upcoming_reservations, 'interval', minutes=5)
     scheduler.start()

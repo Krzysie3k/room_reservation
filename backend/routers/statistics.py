@@ -18,6 +18,10 @@ from reportlab.lib import colors
 from database import get_db
 from models import Reservation, User, Room
 
+from fastapi import Query
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
 
 router = APIRouter(
     prefix="/api/report",
@@ -355,3 +359,89 @@ def export_all_reservations(db: Session = Depends(get_db)):
         print("Błąd eksportu XLSX:", e)
         traceback.print_exc()
         return Response(content=f"Błąd eksportu XLSX: {e}", status_code=500)
+
+
+
+
+@router.get("/pdf-room-schedule")
+def export_room_schedule_pdf(
+    room_id: int = Query(..., description="ID sali"),
+    db: Session = Depends(get_db)
+):
+    try:
+        time_slots = ["08:00", "09:45", "11:30", "13:15", "15:00", "16:45", "18:30"]
+
+        room = db.query(Room).filter(Room.id == room_id).first()
+        if not room:
+            return Response(content="Sala nie istnieje", status_code=404)
+
+        dates = db.query(distinct(Reservation.date))\
+            .join(Reservation.room)\
+            .filter(Reservation.room_id == room_id)\
+            .order_by(Reservation.date)\
+            .all()
+        dates = [d[0] for d in dates if d[0] is not None]
+
+        reservations = db.query(Reservation).options(joinedload(Reservation.user))\
+            .filter(Reservation.room_id == room_id)\
+            .all()
+
+        styles = getSampleStyleSheet()
+        normal_style = ParagraphStyle(name='Center', parent=styles['Normal'], alignment=1, fontSize=9)
+
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer, pagesize=landscape(A4),
+            rightMargin=1 * cm, leftMargin=1 * cm,
+            topMargin=1 * cm, bottomMargin=1 * cm
+        )
+
+        elements = []
+
+        elements.append(Paragraph(f"<b>Harmonogram sali: {room.name}</b>", styles["Heading2"]))
+        elements.append(Spacer(1, 12))
+
+        data = [["DATA"] + time_slots]
+
+        for day in dates:
+            row = [day.strftime("%A %d.%m.%Y").capitalize()]
+            for slot_str in time_slots:
+                slot_start = datetime.datetime.strptime(slot_str, "%H:%M").time()
+                slot_end = (datetime.datetime.combine(datetime.date.today(), slot_start) + datetime.timedelta(minutes=90)).time()
+
+                r = next((res for res in reservations
+                          if res.date == day and res.time_from and res.time_to
+                          and res.time_from < slot_end and res.time_to > slot_start), None)
+
+                if r and r.user:
+                    val = f"{r.user.first_name[0]}.{r.user.last_name}" if r.user.first_name and r.user.last_name else r.user.email
+                else:
+                    val = ""
+                row.append(Paragraph(val, normal_style))
+            data.append(row)
+
+        table = Table(data, colWidths=[4.5 * cm] + [2.8 * cm] * len(time_slots), repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#d3d3d3")),
+            ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ]))
+
+        elements.append(table)
+
+        doc.build(elements)
+        buffer.seek(0)
+
+        return Response(
+            content=buffer.read(),
+            media_type='application/pdf',
+            headers={"Content-Disposition": f"attachment; filename=harmonogram_sala_{room.name}.pdf"}
+        )
+
+    except Exception as e:
+        import traceback
+        print("Błąd generowania PDF (sala):\n", traceback.format_exc())
+        return Response(content="Internal Server Error", status_code=500)

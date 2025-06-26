@@ -99,3 +99,4 @@ class ClassAssignment(Base):
     time_to = Column("godzina_do", Time)
     class_ = relationship("Class", back_populates="assignments")
     room = relationship("Room", back_populates="class_assignments")
+    

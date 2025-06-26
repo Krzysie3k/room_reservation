@@ -44,6 +44,23 @@ export default function ScheduleGrid() {
       setCurrentUser(JSON.parse(stored));
     }
   }, []);
+  const [users, setUsers] = useState<any[]>([]);
+  const getUserName = (userId: string) => {
+    const user = users.find((u) => u.id === userId);
+    return user
+      ? `${user.first_name} ${user.last_name}`
+      : "Nieznany użytkownik";
+  };
+
+  // Pobieranie danych użytkowników
+  useEffect(() => {
+    fetch("http://localhost:8000/users")
+      .then((res) => res.json())
+      .then((data) => setUsers(data))
+      .catch((err) =>
+        console.error("❌ Błąd przy pobieraniu danych użytkowników:", err)
+      );
+  }, []);
 
   // Pobieranie danych z backendu
   useEffect(() => {
@@ -328,7 +345,7 @@ export default function ScheduleGrid() {
                           className="absolute top-1 right-1 text-red-500 hover:text-red-700"
                           title="Usuń rezerwację"
                         >
-                          <FaTrashAlt />
+                          <FaTrashAlt className="text-white" />
                         </button>
                       )}
                     </div>
@@ -422,7 +439,7 @@ export default function ScheduleGrid() {
                                   ? "bg-fuchsia-900 text-white cursor-pointer"
                                   : "bg-blue-950 text-white"
                                 : "bg-gray-50 hover:bg-blue-200 cursor-pointer"
-                            }`}
+                            } relative`} // Ustawiamy 'relative' na komórce
                             title={
                               res
                                 ? `Zajęte: ${res.time_from}–${res.time_to}\n${res.purpose}`
@@ -444,11 +461,23 @@ export default function ScheduleGrid() {
                             {res && (
                               <div className="flex flex-col text-xs leading-tight">
                                 <span className="font-semibold">
-                                  {res.user_id === currentUser?.id
-                                    ? `${currentUser.name}`
-                                    : "Inny użytkownik"}
+                                  {getUserName(res.user_id)}
                                 </span>
                                 <span>{res.purpose}</span>
+
+                                {/* Ikona kosza w prawym górnym rogu */}
+                                {currentUser?.role === "admin" && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation(); // Zapobiega propagacji kliknięcia do komórki
+                                      handleDeleteReservation(res.id);
+                                    }}
+                                    className="absolute top-1 right-1 text-red-500 hover:text-red-700"
+                                    title="Usuń rezerwację"
+                                  >
+                                    <FaTrashAlt className="text-white" />
+                                  </button>
+                                )}
                               </div>
                             )}
                           </td>

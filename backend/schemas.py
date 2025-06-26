@@ -13,7 +13,6 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[EmailStr] = None
-    password: Optional[str] = None
     role: Optional[str] = None
 
 class EquipmentSchema(BaseModel):

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import React from "react";
 
 type User = {
@@ -14,52 +14,57 @@ export default function UserTable({ users }: { users: User[] }) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const handleClose = () => setSelectedUser(null);
   const handleSave = () => {
-    console.log('User updated'); //podłączyć do endpointa i wywalić tego console.log
     setSelectedUser(null);
   };
 
- return (
-  <>
-    <table className="min-w-full bg-white border rounded-lg shadow">
-      <thead>
-        <tr className="bg-gray-200 border border-gray-200 text-left">
-          <th className="p-3">Imię i nazwisko</th>
-          <th className="p-3">Email</th>
-          <th className="p-3">Rola</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {users.map((user) => (
-          <tr key={user.id} className="border-t border border-gray-200">
-            <td className="p-3">
-              {user.first_name} {user.last_name}
-            </td>
-            <td className="p-3">{user.email}</td>
-            <td className="p-3">{user.role}</td>
-            <td>
-              <button className="px-2 py-1 rounded-[6px] hover:bg-gray-200 transition" onClick={() => setSelectedUser(user)}>Edit</button>
-            </td>
+  return (
+    <>
+      <table className="min-w-full bg-white border rounded-lg shadow">
+        <thead>
+          <tr className="bg-gray-200 border border-gray-200 text-left">
+            <th className="p-3">Imię i nazwisko</th>
+            <th className="p-3">Email</th>
+            <th className="p-3">Rola</th>
+            <th></th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {users.map((user) => (
+            <tr key={user.id} className="border-t border border-gray-200">
+              <td className="p-3">
+                {user.first_name} {user.last_name}
+              </td>
+              <td className="p-3">{user.email}</td>
+              <td className="p-3">{user.role}</td>
+              <td>
+                <button
+                  className="px-2 py-1 rounded-[6px] hover:bg-gray-200 transition"
+                  onClick={() => setSelectedUser(user)}
+                >
+                  Edit
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
-    {selectedUser && (
-      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-10 z-50">
-        <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-lg">
-          <h2 className="text-xl font-semibold mb-4">Edytuj użytkownika</h2>
+      {selectedUser && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-10 z-50">
+          <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-lg">
+            <h2 className="text-xl font-semibold mb-4">Edytuj użytkownika</h2>
 
-          <EditUserForm
-            user={selectedUser}
-            onClose={handleClose}
-            onSave={handleSave}
-          />
+            <EditUserForm
+              user={selectedUser}
+              onClose={handleClose}
+              onSave={handleSave}
+            />
+          </div>
         </div>
-      </div>
-    )}
-  </>
-);
+      )}
+    </>
+  );
+}
 
 function EditUserForm({
   user,
@@ -70,16 +75,25 @@ function EditUserForm({
   onClose: () => void;
   onSave: () => void;
 }) {
-  const [formData, setFormData] = useState(user);
+  const [formData, setFormData] = useState<User>(user);
+
+  useEffect(() => {
+    setFormData(user);
+  }, [user]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async () => {
+    const { id, ...payload } = formData;
+
     await fetch(`http://localhost:8000/users/${user.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),});
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
     onSave();
   };
 
@@ -128,4 +142,4 @@ function EditUserForm({
       </div>
     </div>
   );
-}}
+}

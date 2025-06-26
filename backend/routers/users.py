@@ -71,8 +71,6 @@ def update_user(user_id: int, updated_data: UserUpdate, db: Session = Depends(ge
         user.email = updated_data.email
     if updated_data.role is not None:
         user.role = updated_data.role
-    if updated_data.password is not None:
-        user.password = get_password_hash(updated_data.password)
 
     db.commit()
     db.refresh(user)
@@ -106,8 +104,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         }
     }
 
-
-
 # GET CURRENT USER DATA
 @router.get("/me")
 def read_current_user(current_user: User = Depends(get_current_user)):
@@ -126,11 +122,10 @@ def get_all_users(db: Session = Depends(get_db)):
     return [
         {
             "id": user.id,
-            "name": user.first_name,
-            "surname": user.last_name,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "email": user.email,
-            "role": user.role,
-            "password": ""  # nie wysyłaj hasła do frontu
+            "role": user.role
         }
         for user in users
     ]

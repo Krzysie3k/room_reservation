@@ -17,7 +17,7 @@ export default function Page() {
       const data = await login(username, password);
 
       // 🟢 Zapisz token
-      localStorage.setItem("token", data.token);
+      localStorage.setItem("access_token", data.access_token);
 
       localStorage.setItem(
         "user",

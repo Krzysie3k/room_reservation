@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { format, addDays, subDays } from "date-fns";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { pl } from "date-fns/locale";
+import { FaTrashAlt } from "react-icons/fa";
+
 registerLocale("pl", pl);
 
 const hours = ["08:00", "09:45", "11:30", "13:30", "15:15", "17:00", "18:45"];
@@ -77,6 +79,43 @@ export default function ScheduleGrid() {
   const uniqueTypes = Array.from(
     new Set(rooms.map((r) => r.room_type?.name).filter(Boolean))
   );
+
+  const handleDeleteReservation = async (reservationId: string) => {
+    const token = localStorage.getItem("access_token"); // Pobierz token z localStorage
+    if (!token) {
+      console.error("Brak tokenu autoryzacyjnego!");
+      alert("Proszę się zalogować ponownie.");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `http://localhost:8000/reservations/${reservationId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) throw new Error("Błąd przy usuwaniu rezerwacji");
+
+      const data = await res.json();
+      console.log("Dane z backendu:", data);
+
+      // Pobranie zaktualizowanej listy rezerwacji
+      const updatedReservations = await fetch(
+        "http://localhost:8000/reservations"
+      );
+      const updatedData = await updatedReservations.json();
+      setReservations(updatedData);
+    } catch (err) {
+      console.error("❌ Błąd usuwania rezerwacji:", err);
+      alert("Nie udało się usunąć rezerwacji.");
+    }
+  };
 
   return (
     <>
@@ -267,18 +306,31 @@ export default function ScheduleGrid() {
                         : "bg-gray-200 text-black"
                     } rounded-lg px-3 py-3 shadow-sm border border-blue-200 hover:bg-blue-800`}
                   >
-                    <div className="text-xs font-medium flex items-center gap-1">
-                      <FaCalendarDay className="text-blue-200" />
-                      <span>
-                        {format(new Date(res.date), "P", { locale: pl })} –{" "}
-                        {res.time_from}–{res.time_to}
-                      </span>
-                    </div>
-                    <div className="text-sm font-bold mt-1">
-                      Sala {room?.name || "?"}
-                    </div>
-                    <div className="text-xs italic text-blue-200">
-                      {res.purpose}
+                    <div className="relative">
+                      <div className="text-xs font-medium flex items-center gap-1">
+                        <FaCalendarDay className="text-blue-200" />
+                        <span>
+                          {format(new Date(res.date), "P", { locale: pl })} –{" "}
+                          {res.time_from}–{res.time_to}
+                        </span>
+                      </div>
+                      <div className="text-sm font-bold mt-1">
+                        Sala {room?.name || "?"}
+                      </div>
+                      <div className="text-xs italic text-blue-200">
+                        {res.purpose}
+                      </div>
+
+                      {/* Przycisk usuwania rezerwacji */}
+                      {res.user_id === currentUser?.id && (
+                        <button
+                          onClick={() => handleDeleteReservation(res.id)}
+                          className="absolute top-1 right-1 text-red-500 hover:text-red-700"
+                          title="Usuń rezerwację"
+                        >
+                          <FaTrashAlt />
+                        </button>
+                      )}
                     </div>
                   </li>
                 );
@@ -394,7 +446,7 @@ export default function ScheduleGrid() {
                                 <span className="font-semibold">
                                   {res.user_id === currentUser?.id
                                     ? `${currentUser.name}`
-                                    : "Nieznany"}
+                                    : "Inny użytkownik"}
                                 </span>
                                 <span>{res.purpose}</span>
                               </div>

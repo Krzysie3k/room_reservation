@@ -9,7 +9,7 @@
 //     </div>
 //   );
 // }
-"use client"; // ← to dodaj na górze, bo używasz useEffect
+"use client";
 
 import { useEffect, useState } from "react";
 import UserTable from "./UserTable";

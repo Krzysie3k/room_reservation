@@ -31,15 +31,11 @@ export default function ScheduleGrid() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [selectedReservation, setSelectedReservation] = useState<any | null>(
-    null
-  );
 
-  // 👇 Zmieniamy kolejność – te stany muszą być wcześniej
   const [rooms, setRooms] = useState<any[]>([]);
   const [reservations, setReservations] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
 
+  // Ustawienie użytkownika z localStorage
   useEffect(() => {
     const stored = localStorage.getItem("user");
     if (stored) {
@@ -47,41 +43,36 @@ export default function ScheduleGrid() {
     }
   }, []);
 
+  // Pobieranie danych z backendu
   useEffect(() => {
     fetch("http://localhost:8000/rooms")
       .then((res) => res.json())
-      .then((data) => setRooms(data));
+      .then((data) => setRooms(data))
+      .catch((err) =>
+        console.error("❌ Błąd przy pobieraniu danych o pokojach:", err)
+      );
 
     fetch("http://localhost:8000/reservations")
       .then((res) => res.json())
-      .then((data) => setReservations(data));
-
-    fetch("http://localhost:8000/users")
-      .then((res) => res.json())
-      .then((data) => setUsers(data));
+      .then((data) => setReservations(data))
+      .catch((err) =>
+        console.error("❌ Błąd przy pobieraniu danych o rezerwacjach:", err)
+      );
   }, []);
-  if (
-    !Array.isArray(reservations) ||
-    !Array.isArray(rooms) ||
-    !Array.isArray(users)
-  ) {
-    return <div>Ładowanie danych...</div>;
-  }
 
   const formattedDate = format(currentDate, "EEEE, d MMMM yyyy", {
     locale: pl,
   });
   const dateKey = format(currentDate, "yyyy-MM-dd");
 
-  const userReservations = Array.isArray(reservations)
-    ? reservations.filter((r) => {
-        if (r.user_id !== currentUser?.id) return false;
+  // Filtrujemy rezerwacje dla obecnego użytkownika
+  const userReservations = reservations.filter(
+    (r) =>
+      r.user_id === currentUser?.id &&
+      new Date(`${r.date}T${r.time_to}`) >= new Date()
+  );
 
-        const resEnd = new Date(`${r.date}T${r.time_to}`);
-        return resEnd >= new Date(); // tylko przyszłe lub trwające
-      })
-    : [];
-
+  // Unikalne wartości budynków i typów sal
   const uniqueBuildings = Array.from(new Set(rooms.map((r) => r.building)));
   const uniqueTypes = Array.from(
     new Set(rooms.map((r) => r.room_type?.name).filter(Boolean))
@@ -89,7 +80,7 @@ export default function ScheduleGrid() {
 
   return (
     <>
-      {/* MODAL */}
+      {/* MODAL CREATE */}
       {selectedSlot && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-lg w-full max-w-sm">
@@ -168,15 +159,8 @@ export default function ScheduleGrid() {
                     purpose: reservationPurpose,
                   };
 
-                  // console.log("📦 Payload do wysłania:", payload);
-
-                  const method = selectedReservation ? "PUT" : "POST";
-                  const url = selectedReservation
-                    ? `http://localhost:8000/reservations/${selectedReservation.id}`
-                    : `http://localhost:8000/reservations`;
-
-                  fetch(url, {
-                    method,
+                  fetch("http://localhost:8000/reservations", {
+                    method: "POST",
                     headers: {
                       "Content-Type": "application/json",
                     },
@@ -186,8 +170,7 @@ export default function ScheduleGrid() {
                       if (!res.ok) throw new Error("Błąd zapisu");
                       return res.json();
                     })
-                    .then((data) => {
-                      // Po udanym zapisie – odśwież dane z backendu
+                    .then(() => {
                       fetch("http://localhost:8000/reservations")
                         .then((res) => res.json())
                         .then((data) => setReservations(data));
@@ -198,99 +181,11 @@ export default function ScheduleGrid() {
                     });
 
                   setSelectedSlot(null);
-                  setSelectedReservation(null);
                 }}
                 className="px-3 py-1 bg-blue-950 text-white rounded hover:bg-blue-700"
               >
                 Rezerwuj
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {selectedReservation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-sm">
-            <h2 className="text-lg font-bold mb-2 text-gray-700">
-              Szczegóły rezerwacji
-            </h2>
-            <p className="text-sm text-gray-700 mb-4">
-              Sala:{" "}
-              <strong>
-                {rooms.find((r) => r.id === selectedReservation.room_id)?.name}
-              </strong>
-              <br />
-              Data: <strong>{selectedReservation.date}</strong>
-              <br />
-              Godzina:{" "}
-              <strong>
-                {selectedReservation.time_from}–{selectedReservation.time_to}
-              </strong>
-              <br />
-              Cel: <strong>{selectedReservation.purpose}</strong>
-            </p>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setSelectedReservation(null)}
-                className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400"
-              >
-                Zamknij
-              </button>
-
-              {new Date(
-                `${selectedReservation.date}T${selectedReservation.time_from}`
-              ) > new Date() && (
-                <>
-                  <button
-                    onClick={() => {
-                      // Przejście do edycji – np. ustawiamy selectedSlot, żeby użyć tego samego formularza
-                      const room = rooms.find(
-                        (r) => r.id === selectedReservation.room_id
-                      );
-                      if (!room) return;
-                      setSelectedSlot({
-                        roomName: room.name,
-                        hour: selectedReservation.time_from,
-                        date: selectedReservation.date,
-                      });
-                      setReservationPurpose(selectedReservation.purpose);
-                      setSelectedReservation(null); // zamknij ten modal
-                    }}
-                    className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                  >
-                    Edytuj
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      fetch(
-                        `http://localhost:8000/reservations/${selectedReservation.id}`,
-                        {
-                          method: "DELETE",
-                        }
-                      )
-                        .then((res) => {
-                          if (!res.ok) throw new Error("Błąd usuwania");
-                          return fetch(
-                            "http://localhost:8000/reservations"
-                          ).then((r) => r.json());
-                        })
-                        .then((data) => {
-                          setReservations(data);
-                          setSelectedReservation(null);
-                        })
-                        .catch((err) => {
-                          console.error("❌ Błąd anulowania rezerwacji:", err);
-                          alert("Nie udało się anulować rezerwacji.");
-                        });
-                    }}
-                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-                  >
-                    Anuluj
-                  </button>
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -326,8 +221,8 @@ export default function ScheduleGrid() {
                 className="w-full text-xs p-1 border border-gray-300 rounded"
               >
                 <option value="">Wszystkie</option>
-                {uniqueBuildings.map((b, index) => (
-                  <option key={`building-${index}`} value={b}>
+                {uniqueBuildings.map((b) => (
+                  <option key={b} value={b}>
                     {b}
                   </option>
                 ))}
@@ -343,8 +238,8 @@ export default function ScheduleGrid() {
                 className="w-full text-xs p-1 border border-gray-300 rounded"
               >
                 <option value="">Wszystkie</option>
-                {uniqueTypes.map((t, index) => (
-                  <option key={`type-${index}`} value={t}>
+                {uniqueTypes.map((t) => (
+                  <option key={t} value={t}>
                     {t}
                   </option>
                 ))}
@@ -366,8 +261,11 @@ export default function ScheduleGrid() {
                 return (
                   <li
                     key={res.id}
-                    onClick={() => setSelectedReservation(res)}
-                    className="cursor-pointer bg-indigo-900 text-white rounded-lg px-3 py-3 shadow-sm border border-blue-200 hover:bg-blue-800"
+                    className={`cursor-pointer ${
+                      res.user_id === currentUser?.id
+                        ? "bg-indigo-900 text-white"
+                        : "bg-gray-200 text-black"
+                    } rounded-lg px-3 py-3 shadow-sm border border-blue-200 hover:bg-blue-800`}
                   >
                     <div className="text-xs font-medium flex items-center gap-1">
                       <FaCalendarDay className="text-blue-200" />
@@ -462,9 +360,6 @@ export default function ScheduleGrid() {
                             toMinutes(r.time_from) <= toMinutes(hour) &&
                             toMinutes(r.time_to) > toMinutes(hour)
                         );
-                        const user = res
-                          ? users.find((u) => u.id === res.user_id)
-                          : null;
 
                         return (
                           <td
@@ -483,9 +378,7 @@ export default function ScheduleGrid() {
                             }
                             onClick={() => {
                               if (res) {
-                                if (res.user_id === currentUser?.id) {
-                                  setSelectedReservation(res); // klikam w swoją rezerwację → podgląd
-                                }
+                                // To może być np. podgląd rezerwacji, jak w poprzednich wersjach
                               } else {
                                 setSelectedSlot({
                                   roomName: room.name,
@@ -499,8 +392,8 @@ export default function ScheduleGrid() {
                             {res && (
                               <div className="flex flex-col text-xs leading-tight">
                                 <span className="font-semibold">
-                                  {user
-                                    ? `${user.name.charAt(0)}. ${user.surname}`
+                                  {res.user_id === currentUser?.id
+                                    ? `${currentUser.name}`
                                     : "Nieznany"}
                                 </span>
                                 <span>{res.purpose}</span>

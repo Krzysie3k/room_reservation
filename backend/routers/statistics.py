@@ -1,10 +1,17 @@
-from fastapi import APIRouter, Depends, Response
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import distinct
-
 from collections import defaultdict, Counter
 from io import BytesIO
 import datetime
+
+from fastapi import APIRouter, Depends, Response, Query
+from fastapi.responses import StreamingResponse
+from fastapi import Query
+
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import distinct
+
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment
+from openpyxl.utils import get_column_letter
 
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph,
@@ -14,13 +21,13 @@ from reportlab.lib.pagesizes import landscape, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from database import get_db
 from models import Reservation, User, Room
 
-from fastapi import Query
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
+
 
 
 router = APIRouter(
@@ -33,21 +40,23 @@ router = APIRouter(
 
 
 
+
 @router.get("/usage-stats-pdf")
-def export_usage_stats_pdf(db: Session = Depends(get_db)):
+def export_usage_stats_pdf(
+    month: str | None = Query(None, description="Miesiąc w formacie RRRR-MM, np. 2023-06"),
+    db: Session = Depends(get_db)
+):
     try:
         reservations = db.query(Reservation).options(
             joinedload(Reservation.user),
             joinedload(Reservation.room)
         ).all()
 
-        # Parametry slotów (np. godziny, długość slotu)
         time_slots = ["08:00", "09:45", "11:30", "13:15", "15:00", "16:45", "18:30"]
         slot_duration = 1.5  # godziny
         total_slots = len(time_slots)
         max_day_hours = total_slots * slot_duration
 
-        # Grupowanie po (YYYY-MM, room_name)
         grouped = defaultdict(list)
         for r in reservations:
             if not (r.date and r.room and r.time_from and r.time_to):
@@ -66,15 +75,21 @@ def export_usage_stats_pdf(db: Session = Depends(get_db)):
         )
         elements = []
 
+        # Filtrujemy miesiące według parametru
         months = sorted(set(k[0] for k in grouped.keys()))
-        for month in months:
-            elements.append(Paragraph(f"<b>STATYSTYKI REZERWACJI - {month}</b>", title_style))
+        if month:
+            if month not in months:
+                return Response(content=f"Brak danych dla miesiąca {month}", status_code=404)
+            months = [month]
+
+        for m in months:
+            elements.append(Paragraph(f"<b>STATYSTYKI REZERWACJI - {m}</b>", title_style))
             elements.append(Spacer(1, 10))
 
             data = [["Sala", "Liczba rezerwacji", "Lacznie godzin", "Maks. godzin", "Wykorzystanie (%)", "Najczestszy rezerwujacy (% udzialu)"]]
 
-            for room_name in sorted(set(k[1] for k in grouped if k[0] == month)):
-                res_list = grouped[(month, room_name)]
+            for room_name in sorted(set(k[1] for k in grouped if k[0] == m)):
+                res_list = grouped[(m, room_name)]
 
                 res_count = len(res_list)
                 total_hours = sum(
@@ -83,12 +98,10 @@ def export_usage_stats_pdf(db: Session = Depends(get_db)):
                     for r in res_list
                 )
 
-                # Liczba unikalnych dni z rezerwacjami dla sali w miesiącu
                 days = set(r.date for r in res_list)
                 max_hours = len(days) * max_day_hours
                 percent = round((total_hours / max_hours) * 100, 1) if max_hours > 0 else 0.0
 
-                # Liczenie użytkowników
                 user_counter = Counter()
                 for r in res_list:
                     if r.user:
@@ -180,9 +193,20 @@ def export_schedule_pdf(db: Session = Depends(get_db)):
 
         elements = []
 
+        # Mapa dni tygodnia po polsku
+        dzien_tyg = {
+            0: "Poniedzialek",
+            1: "Wtorek",
+            2: "Sroda",
+            3: "Czwartek",
+            4: "Piatek",
+            5: "Sobota",
+            6: "Niedziela"
+        }
+
         for i, day in enumerate(dates):
-            day_str = day.strftime("%A %d.%m.%Y").capitalize()
-            elements.append(Paragraph(f"<b>DAY: {day_str}</b>", styles["Heading2"]))
+            day_str = f"{dzien_tyg[day.weekday()]} {day.strftime('%d.%m.%Y')}"
+            elements.append(Paragraph(f"<b>DZIEN: {day_str}</b>", styles["Heading2"]))
             elements.append(Spacer(1, 6))
 
             header_row = ["SALA"] + time_slots
@@ -275,6 +299,7 @@ def export_schedule_pdf(db: Session = Depends(get_db)):
 
 
 
+
 @router.get("/xlsx")
 def export_all_reservations(db: Session = Depends(get_db)):
     try:
@@ -296,13 +321,10 @@ def export_all_reservations(db: Session = Depends(get_db)):
         for day in dates:
             day_str = day.strftime("%A %d.%B").capitalize()
 
-            # Dzień - scalona komórka
             ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=2 + len(time_slots))
-            ws.cell(row=row_idx, column=1, value=f"DZIEŃ: {day_str}")
-            ws.cell(row=row_idx, column=1).font = Font(bold=True)
+            ws.cell(row=row_idx, column=1, value=f"DZIEŃ: {day_str}").font = Font(bold=True)
             row_idx += 1
 
-            # Godziny
             ws.cell(row=row_idx, column=1, value="SALA").font = Font(bold=True)
             for i, slot in enumerate(time_slots):
                 ws.cell(row=row_idx, column=i + 2, value=slot).font = Font(bold=True)
@@ -322,10 +344,9 @@ def export_all_reservations(db: Session = Depends(get_db)):
                         and r.time_from < slot_end and r.time_to > slot_start
                     ), None)
 
+                    user_info = ""
                     if reservation and reservation.user and reservation.user.first_name and reservation.user.last_name:
                         user_info = f"{reservation.user.first_name[0]}.{reservation.user.last_name}"
-                    else:
-                        user_info = ""
 
                     cell = ws.cell(row=row_idx, column=i + 2, value=user_info)
                     cell.alignment = Alignment(horizontal="center")
@@ -334,9 +355,14 @@ def export_all_reservations(db: Session = Depends(get_db)):
 
             row_idx += 2
 
-        # Auto-szerokość (z poprawką na MergedCell)
+        # Auto-szerokość
         for i, col in enumerate(ws.columns, start=1):
-            max_length = max(len(str(cell.value or "")) for cell in col)
+            max_length = 0
+            for cell in col:
+                if cell.coordinate in ws.merged_cells:
+                    continue
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
             col_letter = get_column_letter(i)
             ws.column_dimensions[col_letter].width = max_length + 2
 
@@ -348,8 +374,8 @@ def export_all_reservations(db: Session = Depends(get_db)):
             "Content-Disposition": "attachment; filename=harmonogram_formatowany.xlsx"
         }
 
-        return Response(
-            content=output.read(),
+        return StreamingResponse(
+            output,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers=headers
         )
@@ -359,6 +385,27 @@ def export_all_reservations(db: Session = Depends(get_db)):
         print("Błąd eksportu XLSX:", e)
         traceback.print_exc()
         return Response(content=f"Błąd eksportu XLSX: {e}", status_code=500)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
